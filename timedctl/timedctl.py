@@ -11,7 +11,11 @@ import terminaltables
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 
-from _config import CONFIG
+# if condition for relative import
+if __name__ == "__main__":
+    from _config import CONFIG
+else:
+    from ._config import CONFIG
 
 
 def client_setup():
