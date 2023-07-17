@@ -2,6 +2,8 @@
 """CLI application for libtimed."""
 
 import datetime
+import json
+import os
 import re
 import sys
 
@@ -12,23 +14,55 @@ import terminaltables
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 
-# if condition for relative import
-if __name__ == "__main__":
-    from _config import CONFIG
-else:
-    from ._config import CONFIG  # pylint: disable=E0401
+
+def load_config():
+    """Load the timedctl config."""
+    cfg = {
+        "username": "",
+        "timed_url": "https://timed.example.com",
+        "oidc_client_id": "timed",
+        "oidc_auth_endpoint": "http://sso.local/auth/realms/test/protocol/openid-connect/auth",
+        "oidc_token_endpoint": "http://sso.local/auth/realms/test/protocol/openid-connect/token",
+    }
+
+    # Get the path to the config file based on the $XDG_config_HOME environment variable
+    if not os.getenv("HOME"):
+        raise EnvironmentError("$HOME is not set")
+
+    xdg_config_home = os.getenv(
+        "XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config")
+    )
+    config_dir = os.path.join(xdg_config_home, "timedctl")
+    config_file = os.path.join(config_dir, "config.json")
+
+    if not os.path.isfile(config_file):
+        os.makedirs(config_dir, exist_ok=True)
+        print("No config file found. Please enter the following infos.")
+        for key in cfg:
+            cfg[key] = input(f"{key}: ")
+        with open(config_file, "w", encoding="utf-8") as file:
+            json.dump(cfg, file)
+    else:
+        with open(config_file, "r", encoding="utf-8") as file:
+            user_config = json.load(file)
+        for key in user_config:
+            cfg[key] = user_config[key]
+    return cfg
+
+
+config = load_config()
 
 
 def client_setup():
     """Set up the timed client."""
     # initialize libtimed
-    url = CONFIG.get("timed_url")
+    url = config.get("timed_url")
     api_namespace = "api/v1"
 
     # Auth stuff
-    client_id = CONFIG.get("oidc_client_id")
-    auth_endpoint = CONFIG.get("oidc_auth_endpoint")
-    token_endpoint = CONFIG.get("oidc_token_endpoint")
+    client_id = config.get("oidc_client_id")
+    auth_endpoint = config.get("oidc_auth_endpoint")
+    token_endpoint = config.get("oidc_token_endpoint")
     auth_path = "timedctl/auth"
     oidc_client = OIDCClient(client_id, auth_endpoint, token_endpoint, auth_path)
     token = oidc_client.authorize()
@@ -168,9 +202,7 @@ def get_reports(date):
         task_obj = report["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
-        project_obj = timed.projects.get(
-            id=task_obj["relationships"]["project"]["id"]
-        )
+        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"])
         project = project_obj["attributes"]["name"]
 
         customer_obj = timed.customers.get(
@@ -381,4 +413,5 @@ def show():
 
 
 if __name__ == "__main__":
+    load_config()
     timedctl()
