@@ -383,10 +383,9 @@ def start(description):
     # get tasks
     tasks = timed.tasks.get({"project": project["id"]})
     # select a task
-    task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
+    task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")  # pylint: disable=W0612
     # create the activity
     res = timed.activities.start(comment=description)
-    # TODO: add task id
 
     if res.status_code == 201:
         msg(f"Activity {description} started successfully.")
