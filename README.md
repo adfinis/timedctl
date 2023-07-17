@@ -10,13 +10,11 @@ Build the project with `poetry build` and install it with `pip install dist/time
 ## Configuration
 Create a config file at `$XDG_CONFIG_HOME/timedctl/config.toml`.
 The following values must be set:
-```json
-{
-    "username": "<your username>",
-    "oidc_client_id": "<your oidc client id>",
-    "oidc_auth_endpoint": "<your oidc auth endpoint>",
-    "oidc_token_endpoint": "<your oidc token endpoint>"
-}
+```toml
+username = "<your username>"
+oidc_client_id = "<your oidc client id>"
+oidc_auth_endpoint = "<your oidc auth endpoint>"
+oidc_token_endpoint = "<your oidc token endpoint>"
 ```
 
 ## License
