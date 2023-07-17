@@ -1,5 +1,5 @@
-import os
 import json
+import os
 
 CONFIG = {
     "username": "",
@@ -9,13 +9,18 @@ CONFIG = {
     "oidc_token_endpoint": "http://sso.example.com/auth/realms/test/protocol/openid-connect/token",
 }
 
-
+# Get the path to the config file based on the $XDG_CONFIG_HOME environment variable
 if not os.getenv("HOME"):
-    raise Exception("HOME environment variable not set")
-config_file = os.path.join(os.getenv("HOME", ""), ".config", "timedctl", "config.json")
+    raise EnvironmentError("$HOME is not set")
+
+xdg_config_home = os.getenv(
+    "XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config")
+)
+config_dir = os.path.join(xdg_config_home, "timedctl")
+config_file = os.path.join(config_dir, "config.json")
 
 if not os.path.isfile(config_file):
-    os.makedirs(os.path.dirname(config_file), exist_ok=True)
+    os.makedirs(config_dir, exist_ok=True)
     with open(config_file, "w") as f:
         json.dump(CONFIG, f)
     raise Exception(

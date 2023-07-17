@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """CLI application for libtimed."""
 
+import datetime
 import re
 
 import click
-import datetime
 import pyfzf
 import rich
 import terminaltables
@@ -59,7 +59,7 @@ def fzf_wrapper(objects, title_key_array, prompt):
                 title = title[key]
         titles.append(title)
     # run the fzf prompt
-    result = pyfzf.FzfPrompt().prompt(titles, f"--prompt='{prompt}'")[0]
+    result = [*pyfzf.FzfPrompt().prompt(titles, f"--prompt='{prompt}'"), None][0]
     # turn the results back into objects
     for obj in objects:
         if type(title_key_array[0]) == int:
