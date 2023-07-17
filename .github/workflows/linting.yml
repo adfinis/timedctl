@@ -23,19 +23,3 @@ jobs:
       - name: Analysing the code with pylint
         run: |
           pylint $(git ls-files 'timedctl/*.py')
-  alexjs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - name: Comment on new PR
-        uses: brown-ccv/alex-recommends@v1.2.1
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          message_id: 'alex'
-          pr_only: false
-      - name: Alex Recommends
-        uses: brown-ccv/alex-recommends@v1.2.1
