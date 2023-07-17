@@ -8,7 +8,16 @@ Click TUI for [https://github.com/adfinis/timed-frontend](Timed) using [https://
 Build the project with `poetry build` and install it with `pip install dist/timedctl-*.whl`. You should now be able to use `timedctl` iin your terminal.
 
 ## Configuration
-There is a config file at `$XDG_CONFIG_HOME/timedctl/config.toml`.
+Create a config file at `$XDG_CONFIG_HOME/timedctl/config.toml`.
+The following values must be set:
+```json
+{
+    "username": "<your username>",
+    "oidc_client_id": "<your oidc client id>",
+    "oidc_auth_endpoint": "<your oidc auth endpoint>",
+    "oidc_token_endpoint": "<your oidc token endpoint>"
+}
+```
 
 ## License
 Code released under the [GNU Affero General Public License v3.0](LICENSE).
