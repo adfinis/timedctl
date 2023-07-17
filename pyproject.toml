@@ -26,3 +26,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 timedctl = "timedctl.timedctl:timedctl"
+
+[tool.semantic_release]
+version_variable = "tool.poetry.version"
