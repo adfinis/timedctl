@@ -21,7 +21,7 @@ else:
 def client_setup():
     """Set up the timed client."""
     # initialize libtimed
-    URL = "https://timed.example.com"
+    URL = CONFIG.get("timed_url")
     API_NAMESPACE = "api/v1"
 
     # Auth stuff

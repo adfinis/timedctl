@@ -3,6 +3,7 @@ import json
 
 CONFIG = {
     "username": "",
+    "timed_url": "https://timed.example.com",
     "oidc_client_id": "timed",
     "oidc_auth_endpoint": "http://sso.example.com/auth/realms/test/protocol/openid-connect/auth",
     "oidc_token_endpoint": "http://sso.example.com/auth/realms/test/protocol/openid-connect/token",
