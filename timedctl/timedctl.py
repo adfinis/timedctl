@@ -2,7 +2,7 @@
 """CLI application for libtimed."""
 
 import datetime
-import json
+import tomllib
 import os
 import re
 import sys
@@ -11,6 +11,7 @@ import click
 import pyfzf
 import rich
 import terminaltables
+from tomlkit import dump
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 
@@ -33,7 +34,7 @@ def load_config():
         "XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config")
     )
     config_dir = os.path.join(xdg_config_home, "timedctl")
-    config_file = os.path.join(config_dir, "config.json")
+    config_file = os.path.join(config_dir, "config.toml")
 
     if not os.path.isfile(config_file):
         os.makedirs(config_dir, exist_ok=True)
@@ -41,10 +42,10 @@ def load_config():
         for key in cfg:
             cfg[key] = input(f"{key}: ")
         with open(config_file, "w", encoding="utf-8") as file:
-            json.dump(cfg, file)
+            dump(cfg, file)
     else:
-        with open(config_file, "r", encoding="utf-8") as file:
-            user_config = json.load(file)
+        with open(config_file, "rb") as file:
+            user_config = tomllib.load(file)
         for key in user_config:
             cfg[key] = user_config[key]
     return cfg
