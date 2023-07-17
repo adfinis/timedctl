@@ -88,18 +88,13 @@ def time_sum(arr):
     total = datetime.timedelta()
     for line in arr[1:]:
         val = line[-1]
-        hours, minutes, seconds = val.split(":")
-        total += datetime.timedelta(
-            hours=int(hours), minutes=int(minutes), seconds=int(seconds)
-        )
+        total += val
     # format as HH:MM:SS
     return str(total)
 
 
 def select_report(date):
     """FZF prompt to select a report."""
-    if date == "today":
-        date = datetime.datetime.now().strftime("%Y-%m-%d")
     reports = timed.reports.get(
         {"date": date}, include="task,task.project,task.project.customer"
     )
@@ -110,7 +105,7 @@ def select_report(date):
             [
                 task["attributes"]["name"],
                 report["attributes"]["comment"],
-                report["attributes"]["duration"],
+                str(report["attributes"]["duration"]),
                 task["id"],
                 report["id"],
             ]
@@ -152,22 +147,18 @@ def get():
 
 @get.command("overtime")
 @click.option("--username", default=CONFIG.get("username"))
-@click.option("--date", default="today")
+@click.option("--date", default=None)
 def get_overtime(username, date):
     """Get overtime of user."""
-    if date == "today":
-        date = datetime.datetime.now().strftime("%Y-%m-%d")
     me = timed.users.me["id"]
     overtime = timed.overtime.get({"user": me, "date": date})
     msg(f"Currrent overtime is: {overtime}")
 
 
 @get.command("reports")
-@click.option("--date", default="today")
-def get_reports(date):
+@click.option("--date")
+def get_reports(date, default=None):
     """Get reports."""
-    if date == "today":
-        date = datetime.datetime.now().strftime("%Y-%m-%d")
     reports = timed.reports.get(
         {"date": date}, include="task,task.project,task.project.customer"
     )
@@ -177,7 +168,7 @@ def get_reports(date):
         task = task_obj["attributes"]["name"]
 
         project_obj = timed.projects.get(
-            id=task_obj["relationships"]["project"]["data"]["id"]
+            id=task_obj["relationships"]["project"]["id"]
         )
         project = project_obj["attributes"]["name"]
 
@@ -213,7 +204,7 @@ def delete():
 
 
 @delete.command("report")
-@click.option("--date", default="today")
+@click.option("--date", default=None)
 def delete_report(date):
     """Delete report(s)."""
     report = select_report(date)
@@ -303,7 +294,7 @@ def edit():
 
 
 @edit.command("report")
-@click.option("--date", default="today")
+@click.option("--date", default=None)
 def edit_report(date):
     """Edit report(s)."""
     report = select_report(date)
