@@ -25,13 +25,9 @@ def client_setup():
     API_NAMESPACE = "api/v1"
 
     # Auth stuff
-    CLIENT_ID = "timed-client-id"
-    AUTH_ENDPOINT = (
-        "https://sso.example.com/auth/realms/example/protocol/openid-connect/auth"
-    )
-    TOKEN_ENDPOINT = (
-        "https://sso.example.com/auth/realms/example/protocol/openid-connect/token"
-    )
+    CLIENT_ID = CONFIG.get("oidc_client_id")
+    AUTH_ENDPOINT = CONFIG.get("oidc_auth_endpoint")
+    TOKEN_ENDPOINT = CONFIG.get("oidc_token_endpoint")
     AUTH_PATH = "timedctl/auth"
     oidc_client = OIDCClient(CLIENT_ID, AUTH_ENDPOINT, TOKEN_ENDPOINT, AUTH_PATH)
     token = oidc_client.authorize()
@@ -140,7 +136,6 @@ def select_report(date):
     return report
 
 
-
 timed = client_setup()
 
 
@@ -222,11 +217,13 @@ def delete():
 def delete_report(date):
     """Delete report(s)."""
     report = select_report(date)
-    res = pyfzf.FzfPrompt().prompt(["Yes", "No"], f"--prompt 'Are you sure? Delete \"{report[1]}\"?'")
+    res = pyfzf.FzfPrompt().prompt(
+        ["Yes", "No"], f"--prompt 'Are you sure? Delete \"{report[1]}\"?'"
+    )
     if res[0] == "Yes":
         r = timed.reports.delete(report[-1])
         if r.status_code == 204:
-            msg(f"Deleted report \"{report[1]}\"")
+            msg(f'Deleted report "{report[1]}"')
         else:
             error_handler("ERR_DELETION_FAILED")
     else:
