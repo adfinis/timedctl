@@ -3,6 +3,7 @@
 
 import datetime
 import re
+import sys
 
 import click
 import pyfzf
@@ -15,23 +16,23 @@ from libtimed.oidc import OIDCClient
 if __name__ == "__main__":
     from _config import CONFIG
 else:
-    from ._config import CONFIG
+    from ._config import CONFIG  # pylint: disable=E0401
 
 
 def client_setup():
     """Set up the timed client."""
     # initialize libtimed
-    URL = CONFIG.get("timed_url")
-    API_NAMESPACE = "api/v1"
+    url = CONFIG.get("timed_url")
+    api_namespace = "api/v1"
 
     # Auth stuff
-    CLIENT_ID = CONFIG.get("oidc_client_id")
-    AUTH_ENDPOINT = CONFIG.get("oidc_auth_endpoint")
-    TOKEN_ENDPOINT = CONFIG.get("oidc_token_endpoint")
-    AUTH_PATH = "timedctl/auth"
-    oidc_client = OIDCClient(CLIENT_ID, AUTH_ENDPOINT, TOKEN_ENDPOINT, AUTH_PATH)
+    client_id = CONFIG.get("oidc_client_id")
+    auth_endpoint = CONFIG.get("oidc_auth_endpoint")
+    token_endpoint = CONFIG.get("oidc_token_endpoint")
+    auth_path = "timedctl/auth"
+    oidc_client = OIDCClient(client_id, auth_endpoint, token_endpoint, auth_path)
     token = oidc_client.authorize()
-    return TimedAPIClient(token, URL, API_NAMESPACE)
+    return TimedAPIClient(token, url, api_namespace)
 
 
 def msg(message, nonl=False):
@@ -42,7 +43,7 @@ def msg(message, nonl=False):
 def error_handler(error):
     """Handle errors."""
     rich.print(f"[bold red]Error: {error}[/bold red]")
-    exit(1)
+    sys.exit(1)
 
 
 def fzf_wrapper(objects, title_key_array, prompt):
@@ -51,7 +52,7 @@ def fzf_wrapper(objects, title_key_array, prompt):
     # . is separator for the keys.
     titles = []
     for obj in objects:
-        if type(title_key_array[0]) == int:
+        if isinstance(title_key_array[0], int):
             title = obj[title_key_array[0]]
         else:
             title = obj
@@ -62,7 +63,7 @@ def fzf_wrapper(objects, title_key_array, prompt):
     result = [*pyfzf.FzfPrompt().prompt(titles, f"--prompt='{prompt}'"), None][0]
     # turn the results back into objects
     for obj in objects:
-        if type(title_key_array[0]) == int:
+        if isinstance(title_key_array[0], int):
             title = obj[title_key_array[0]]
         else:
             title = obj
@@ -71,11 +72,11 @@ def fzf_wrapper(objects, title_key_array, prompt):
         if title == result:
             return obj
     error_handler("ERR_FZF_EXCEPTION")
+    return []
 
 
 def time_picker(default=None):
     """Interactively pick a time using either arrow keys or typing."""
-    # TODO: implement this
     res = ""
     while not re.match(r"^\d{2}:\d{2}:\d{2}$", res):
         rich.print("[bold green]Duration[/bold green] (hh:mm:ss)", end="")
@@ -136,28 +137,28 @@ timed = client_setup()
 
 @click.group()
 def timedctl():
-    pass
+    """Use timedctl."""
+    pass  # pylint: disable=W0107
 
 
 @timedctl.group()
 def get():
     """Get different things."""
-    pass
+    pass  # pylint: disable=W0107
 
 
 @get.command("overtime")
-@click.option("--username", default=CONFIG.get("username"))
 @click.option("--date", default=None)
-def get_overtime(username, date):
+def get_overtime(date):
     """Get overtime of user."""
-    me = timed.users.me["id"]
-    overtime = timed.overtime.get({"user": me, "date": date})
+    user = timed.users.me["id"]
+    overtime = timed.overtime.get({"user": user, "date": date})
     msg(f"Currrent overtime is: {overtime}")
 
 
 @get.command("reports")
-@click.option("--date")
-def get_reports(date, default=None):
+@click.option("--date", default=None)
+def get_reports(date):
     """Get reports."""
     reports = timed.reports.get(
         {"date": date}, include="task,task.project,task.project.customer"
@@ -200,7 +201,7 @@ def get_absences():
 @timedctl.group()
 def delete():
     """Delete different things."""
-    pass
+    pass  # pylint: disable=W0107
 
 
 @delete.command("report")
@@ -212,8 +213,8 @@ def delete_report(date):
         ["Yes", "No"], f"--prompt 'Are you sure? Delete \"{report[1]}\"?'"
     )
     if res[0] == "Yes":
-        r = timed.reports.delete(report[-1])
-        if r.status_code == 204:
+        req = timed.reports.delete(report[-1])
+        if req.status_code == 204:
             msg(f'Deleted report "{report[1]}"')
         else:
             error_handler("ERR_DELETION_FAILED")
@@ -224,19 +225,19 @@ def delete_report(date):
 @delete.command("holiday")
 def delete_holiday():
     """Delete holiday(s)."""
-    pass
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @delete.command("absence")
 def delete_absence():
     """Delete absence(s)."""
-    pass
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @timedctl.group()
 def add():
     """Add different things."""
-    pass
+    pass  # pylint: disable=W0107
 
 
 @add.command("report")
@@ -278,19 +279,19 @@ def add_report():
 @add.command("holiday")
 def add_holiday():
     """Add holiday(s)."""
-    pass
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @add.command("absence")
 def add_absence():
     """Add absence(s)."""
-    pass
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @timedctl.group()
 def edit():
     """Edit different things."""
-    pass
+    pass  # pylint: disable=W0107
 
 
 @edit.command("report")
@@ -315,25 +316,23 @@ def edit_report(date):
     else:
         error_handler("ERR_REPORT_UPDATE_ABORTED")
 
-    pass
-
 
 @edit.command("holiday")
 def edit_holiday():
     """Edit holiday(s)."""
-    pass
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @edit.command("absence")
 def edit_absence():
     """Edit absence(s)."""
-    pass
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @timedctl.group()
 def record():
     """Do stuff with activities."""
-    pass
+    pass  # pylint: disable=W0107
 
 
 @record.command()
@@ -355,7 +354,7 @@ def start(description):
     task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
     # create the activity
     res = timed.activities.start(comment=description)
-    # TODO: FIXME: add task id
+    # TODO: add task id
 
     if res.status_code == 201:
         msg(f"Activity {description} started successfully.")

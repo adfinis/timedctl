@@ -1,5 +1,8 @@
+#!/usr/bin/python3
+"""Load and create a config file."""
 import json
 import os
+
 
 CONFIG = {
     "username": "",
@@ -21,15 +24,13 @@ config_file = os.path.join(config_dir, "config.json")
 
 if not os.path.isfile(config_file):
     os.makedirs(config_dir, exist_ok=True)
-    with open(config_file, "w") as f:
+    print("No config file found. Please enter the following infos.")
+    for key in CONFIG:
+        CONFIG[key] = input(f"{key}: ")
+    with open(config_file, "w", encoding="utf-8") as f:
         json.dump(CONFIG, f)
-    raise Exception(
-        "Config file not found. Created a default one at {}. Please edit it in order for timedctl to work.".format(
-            config_file
-        )
-    )
 else:
-    with open(config_file, "r") as f:
+    with open(config_file, "r", encoding="utf-8") as f:
         user_config = json.load(f)
     for key in user_config:
         CONFIG[key] = user_config[key]
