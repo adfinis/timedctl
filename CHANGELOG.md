@@ -2,6 +2,15 @@
 
 
 
+## v1.0.7 (2023-07-18)
+
+### Fix
+
+* fix(building): Drop min required py version ([`628c25d`](https://github.com/adfinis/timedctl/commit/628c25d7d4348f8bb58e96f7df4689f0e85a1b2c))
+
+* fix(Ci): Fix build version ([`5ea23ab`](https://github.com/adfinis/timedctl/commit/5ea23ab258971eb37613b72a26e408ab2cfb117e))
+
+
 ## v1.0.6 (2023-07-17)
 
 ### Fix
