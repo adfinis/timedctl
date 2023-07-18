@@ -2,6 +2,13 @@
 
 
 
+## v2.0.0 (2023-07-18)
+
+### Breaking
+
+* feat!: use toml as planned instead of json ([`587d142`](https://github.com/adfinis/timedctl/commit/587d14232d74eb80470d43fa9d03b8df7bddf3c3))
+
+
 ## v1.0.8 (2023-07-18)
 
 ### Fix
