@@ -2,6 +2,13 @@
 
 
 
+## v1.0.8 (2023-07-18)
+
+### Fix
+
+* fix: Use upstream pypi libtimed ([`1d85e7a`](https://github.com/adfinis/timedctl/commit/1d85e7a55afde0d54c24c86c76e4ebbe71f2bfab))
+
+
 ## v1.0.7 (2023-07-18)
 
 ### Fix
