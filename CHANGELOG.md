@@ -2,6 +2,13 @@
 
 
 
+## v3.0.1 (2023-07-19)
+
+### Fix
+
+* fix: Bump libtimed to 0.2.1 ([`e5ed312`](https://github.com/adfinis/timedctl/commit/e5ed3126666e5b1a85c5af066992bdbdff6a6507))
+
+
 ## v3.0.0 (2023-07-19)
 
 ### Breaking
