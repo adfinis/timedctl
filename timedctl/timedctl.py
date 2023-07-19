@@ -226,6 +226,41 @@ def get_reports(date):
     msg(f"Total: {time_sum(table)}")
 
 
+@get.command("activities")
+@click.option("--date", default=None)
+def get_activities(date):
+    """Get activities."""
+    activities = timed.activities.get(
+        {"day": date}, include="task,task.project,task.project.customer"
+    )
+    table = [["Activity", "Comment", "Start", "End"]]
+    for activity in activities:
+        task_obj = activity["relationships"]["task"]
+        task = task_obj["attributes"]["name"]
+
+        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"])
+        project = project_obj["attributes"]["name"]
+
+        customer_obj = timed.customers.get(
+            id=project_obj["relationships"]["customer"]["data"]["id"]
+        )
+        customer = customer_obj["attributes"]["name"]
+
+        table.append(
+            [
+                f"{customer} > {project} > {task}",
+                activity["attributes"]["comment"],
+                activity["attributes"]["from-time"].strftime("%H:%M:%S"),
+                activity["attributes"]["to-time"].strftime("%H:%M:%S")
+                if activity["attributes"]["to-time"] is not None
+                else "active",
+            ]
+        )
+    output = terminaltables.SingleTable(table)
+    msg(f"Activities for {date if date is not None else 'today'}:")
+    click.echo(output.table)
+
+
 @get.command("absences")
 def get_absences():
     """Get absences."""
@@ -363,14 +398,14 @@ def edit_absence():
 
 
 @timedctl.group()
-def record():
+def activity():
     """Do stuff with activities."""
     pass  # pylint: disable=W0107
 
 
-@record.command()
-@click.argument("description")
-def start(description):
+@activity.command()
+@click.argument("comment")
+def start(comment):
     """Start recording activity."""
     customers = timed.customers.get()
     # ask the user to select a customer
@@ -384,32 +419,61 @@ def start(description):
     # get tasks
     tasks = timed.tasks.get({"project": project["id"]})
     # select a task
-    task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")  # pylint: disable=W0612
+    task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
     # create the activity
-    res = timed.activities.start(comment=description)
+    res = timed.activities.start(
+        attributes={"comment": comment}, relationships={"task": task["id"]}
+    )
 
     if res.status_code == 201:
-        msg(f"Activity {description} started successfully.")
+        msg(f"Activity {comment} started successfully.")
         return
     # handle exception
     error_handler("ERR_ACTIVITY_START_FAILED")
 
 
-@record.command()
+@activity.command()
 def stop():
     """Stop current activity."""
-    timed.activities.stop()
     msg("Activity stopped successfully.")
 
 
-@record.command()
+@activity.command()
 def show():
     """Show current activity."""
     current_activity = timed.activities.current
     if current_activity:
-        msg(f"Current activity: {current_activity['attributes']['comment']}")
+        msg(
+            f"Current activity: {current_activity['attributes']['comment']} (Since {current_activity['attributes']['from-time'].strftime('%H:%M:%S')})"
+        )
     else:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
+
+
+@activity.command()
+def generate_timesheet():
+    """Generate the timesheet of the current activities."""
+    activities = timed.activities.get()
+    if activities:
+        for activity in activities:
+            if not activity["attributes"]["transferred"]:
+                from_time = activity["attributes"]["from-time"]
+                to_time = activity["attributes"]["to-time"]
+                duration = to_time - from_time
+                task = activity["relationships"]["task"]["data"]["id"]
+                timed.reports.post(
+                    {
+                        "duration": duration,
+                        "comment": activity["attributes"]["comment"],
+                    },
+                    {"task": task},
+                )
+                timed.activities.patch(
+                    activity["id"], {"transferred": True}, {"task": task}
+                )
+        msg("Timesheet generated successfully.")
+    else:
+        error_handler("ERR_NO_ACTIVITIES")
 
 
 if __name__ == "__main__":
