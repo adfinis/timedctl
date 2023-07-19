@@ -2,6 +2,19 @@
 
 
 
+## v2.0.1 (2023-07-19)
+
+### Chore
+
+* chore: add license in pyproject.toml ([`9cd8c1e`](https://github.com/adfinis/timedctl/commit/9cd8c1e18ef481a63019488e6b192128583a4140))
+
+* chore: Add PKGBUILD ([`18b2f3c`](https://github.com/adfinis/timedctl/commit/18b2f3cd8dbfc7072cab3c031a90820eb24ed7f4))
+
+### Fix
+
+* fix: Add AUR Releaser ([`8cd76bd`](https://github.com/adfinis/timedctl/commit/8cd76bd554ecb6ca25da687542f7d2aae33da1a2))
+
+
 ## v2.0.0 (2023-07-18)
 
 ### Breaking
