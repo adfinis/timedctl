@@ -2,6 +2,13 @@
 
 
 
+## v3.0.0 (2023-07-19)
+
+### Breaking
+
+* feat!: Updated SSO configuration, fix date display ([`e32a811`](https://github.com/adfinis/timedctl/commit/e32a8110e0c79f6c08894030eabd6f204123063a))
+
+
 ## v2.0.1 (2023-07-19)
 
 ### Chore
