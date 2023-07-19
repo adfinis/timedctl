@@ -231,6 +231,23 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
+name = "click-aliases"
+version = "1.0.1"
+description = "Enable aliases for Click"
+optional = false
+python-versions = "*"
+files = [
+    {file = "click-aliases-1.0.1.tar.gz", hash = "sha256:f48012077e0788eb02f4f8ee458fef3601873fec6c998e9ea8b4554394e705a3"},
+    {file = "click_aliases-1.0.1-py2.py3-none-any.whl", hash = "sha256:229ecab12a97d1d5ce3f1fd7ce16da0e4333a24ebe3b34d8b7a6d0a1d2cfab90"},
+]
+
+[package.dependencies]
+click = "*"
+
+[package.extras]
+dev = ["coveralls", "flake8", "flake8-import-order", "pytest", "pytest-cov", "tox-travis", "wheel"]
+
+[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -790,4 +807,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "451cf36a221e0b27055afa2ef0c94f46113b5c6ab051962a6179e560c5002dd4"
+content-hash = "1cb7ea9b8d975a73526b287c0cef90da7febd735b2bdc27ccd71ed114881e86f"
