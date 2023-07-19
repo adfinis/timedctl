@@ -11,6 +11,7 @@ import click
 import pyfzf
 import rich
 import terminaltables
+from click_aliases import ClickAliasedGroup
 from tomlkit import dump
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
@@ -170,19 +171,19 @@ def select_report(date):
 timed = client_setup()
 
 
-@click.group()
+@click.group(cls=ClickAliasedGroup)
 def timedctl():
     """Use timedctl."""
     pass  # pylint: disable=W0107
 
 
-@timedctl.group()
+@timedctl.group(cls=ClickAliasedGroup, aliases=["g", "show", "describe"])
 def get():
     """Get different things."""
     pass  # pylint: disable=W0107
 
 
-@get.command("overtime")
+@get.command("overtime", aliases=["t", "ot", "undertime"])
 @click.option("--date", default=None)
 def get_overtime(date):
     """Get overtime of user."""
@@ -191,7 +192,7 @@ def get_overtime(date):
     msg(f"Currrent overtime is: {overtime}")
 
 
-@get.command("reports")
+@get.command("reports", aliases=["report", "r"])
 @click.option("--date", default=None)
 def get_reports(date):
     """Get reports."""
@@ -226,7 +227,7 @@ def get_reports(date):
     msg(f"Total: {time_sum(table)}")
 
 
-@get.command("activities")
+@get.command("activities", aliases=["a", "ac", "activity"])
 @click.option("--date", default=None)
 def get_activities(date):
     """Get activities."""
@@ -261,18 +262,18 @@ def get_activities(date):
     click.echo(output.table)
 
 
-@get.command("absences")
+@get.command("absences", aliases=["abs"])
 def get_absences():
     """Get absences."""
 
 
-@timedctl.group()
+@timedctl.group(cls=ClickAliasedGroup, aliases=["rm", "d", "remove", "del"])
 def delete():
     """Delete different things."""
     pass  # pylint: disable=W0107
 
 
-@delete.command("report")
+@delete.command("report", aliases=["r"])
 @click.option("--date", default=None)
 def delete_report(date):
     """Delete report(s)."""
@@ -290,25 +291,25 @@ def delete_report(date):
         error_handler("ERR_DELETION_ABORTED")
 
 
-@delete.command("holiday")
+@delete.command("holiday", aliases=["h"])
 def delete_holiday():
     """Delete holiday(s)."""
     error_handler("ERR_NOT_IMPLEMENTED")
 
 
-@delete.command("absence")
+@delete.command("absence", aliases=["abs"])
 def delete_absence():
     """Delete absence(s)."""
     error_handler("ERR_NOT_IMPLEMENTED")
 
 
-@timedctl.group()
+@timedctl.group(cls=ClickAliasedGroup, aliases=["a", "create"])
 def add():
     """Add different things."""
     pass  # pylint: disable=W0107
 
 
-@add.command("report")
+@add.command("report", aliases=["r"])
 def add_report():
     """Add report(s)."""
     customers = timed.customers.get()
@@ -344,25 +345,25 @@ def add_report():
     error_handler("ERR_REPORT_CREATION_FAILED")
 
 
-@add.command("holiday")
+@add.command("holiday", aliases=["h"])
 def add_holiday():
     """Add holiday(s)."""
     error_handler("ERR_NOT_IMPLEMENTED")
 
 
-@add.command("absence")
+@add.command("absence", aliases=["abs"])
 def add_absence():
     """Add absence(s)."""
     error_handler("ERR_NOT_IMPLEMENTED")
 
 
-@timedctl.group()
+@timedctl.group(cls=ClickAliasedGroup, aliases=["e", "edit", "update"])
 def edit():
     """Edit different things."""
     pass  # pylint: disable=W0107
 
 
-@edit.command("report")
+@edit.command("report", aliases=["r"])
 @click.option("--date", default=None)
 def edit_report(date):
     """Edit report(s)."""
@@ -385,25 +386,25 @@ def edit_report(date):
         error_handler("ERR_REPORT_UPDATE_ABORTED")
 
 
-@edit.command("holiday")
+@edit.command("holiday", aliases=["h"])
 def edit_holiday():
     """Edit holiday(s)."""
     error_handler("ERR_NOT_IMPLEMENTED")
 
 
-@edit.command("absence")
+@edit.command("absence", aliases=["abs"])
 def edit_absence():
     """Edit absence(s)."""
     error_handler("ERR_NOT_IMPLEMENTED")
 
 
-@timedctl.group()
+@timedctl.group(cls=ClickAliasedGroup, aliases=["ac"])
 def activity():
     """Do stuff with activities."""
     pass  # pylint: disable=W0107
 
 
-@activity.command()
+@activity.command(aliases=["add", "s"])
 @click.argument("comment")
 def start(comment):
     """Start recording activity."""
@@ -433,13 +434,13 @@ def start(comment):
 
 
 @activity.command()
-def stop():
+def stop(aliases=["end", "finish"]):
     """Stop current activity."""
     msg("Activity stopped successfully.")
 
 
 @activity.command()
-def show():
+def show(aliases=["s", "get", "info"]):
     """Show current activity."""
     current_activity = timed.activities.current
     if current_activity:
@@ -451,7 +452,7 @@ def show():
 
 
 @activity.command()
-def generate_timesheet():
+def generate_timesheet(aliases=["gts", "ts", "timesheet", "generate"]):
     """Generate the timesheet of the current activities."""
     activities = timed.activities.get()
     if activities:

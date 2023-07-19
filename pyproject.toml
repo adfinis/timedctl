@@ -14,6 +14,7 @@ rich = "^13.4.2"
 libtimed = "^0.2.1"
 terminaltables = "^3.1.10"
 tomlkit = "^0.11.8"
+click-aliases = "^1.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
