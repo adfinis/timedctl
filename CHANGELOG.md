@@ -2,6 +2,13 @@
 
 
 
+## v3.2.0 (2023-07-19)
+
+### Feature
+
+* feat: Add command aliases ([`db5f017`](https://github.com/adfinis/timedctl/commit/db5f017712f94ca4e903a799331b7a132396da98))
+
+
 ## v3.1.0 (2023-07-19)
 
 ### Feature
