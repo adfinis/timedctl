@@ -2,6 +2,13 @@
 
 
 
+## v3.1.0 (2023-07-19)
+
+### Feature
+
+* feat: Add activity table and timesheet generation ([`7b8ce2f`](https://github.com/adfinis/timedctl/commit/7b8ce2f173b73167f72015f92c3f0a7faf7f0841))
+
+
 ## v3.0.1 (2023-07-19)
 
 ### Fix
