@@ -19,11 +19,11 @@ from libtimed.oidc import OIDCClient
 def load_config():
     """Load the timedctl config."""
     cfg = {
-        "username": "",
+        "username": "test",
         "timed_url": "https://timed.example.com",
-        "oidc_client_id": "timed",
-        "oidc_auth_endpoint": "http://sso.local/auth/realms/test/protocol/openid-connect/auth",
-        "oidc_token_endpoint": "http://sso.local/auth/realms/test/protocol/openid-connect/token",
+        "sso_url": "https://sso.example.com",
+        "sso_realm": "example",
+        "sso_client_id": "timedctl",
     }
 
     # Get the path to the config file based on the $XDG_config_HOME environment variable
@@ -40,7 +40,7 @@ def load_config():
         os.makedirs(config_dir, exist_ok=True)
         print("No config file found. Please enter the following infos.")
         for key in cfg:
-            cfg[key] = input(f"{key}: ")
+            cfg[key] = input(f"{key} ({cfg[key]}): ")
         with open(config_file, "w", encoding="utf-8") as file:
             dump(cfg, file)
     else:
@@ -61,11 +61,11 @@ def client_setup():
     api_namespace = "api/v1"
 
     # Auth stuff
-    client_id = config.get("oidc_client_id")
-    auth_endpoint = config.get("oidc_auth_endpoint")
-    token_endpoint = config.get("oidc_token_endpoint")
+    client_id = config.get("sso_client_id")
+    sso_url = config.get("sso_url")
+    sso_realm = config.get("sso_realm")
     auth_path = "timedctl/auth"
-    oidc_client = OIDCClient(client_id, auth_endpoint, token_endpoint, auth_path)
+    oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
     token = oidc_client.authorize()
     return TimedAPIClient(token, url, api_namespace)
 
@@ -221,7 +221,7 @@ def get_reports(date):
             ]
         )
     output = terminaltables.SingleTable(table)
-    msg(f"Reports for {date}:")
+    msg(f"Reports for {date if date is not None else 'today'}:")
     click.echo(output.table)
     msg(f"Total: {time_sum(table)}")
 
