@@ -434,21 +434,42 @@ def activity():
 
 @activity.command(aliases=["add", "s"])
 @click.argument("comment")
-def start(comment):
+@click.option("--customer", default=None)
+@click.option("--project", default=None)
+@click.option("--task", default=None)
+def start(comment, customer, project, task):
     """Start recording activity."""
     customers = timed.customers.get()
     # ask the user to select a customer
     msg("Select a customer")
     # select a customer
-    customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
+    if customer:
+        customer = [c for c in customers if c["attributes"]["name"] == customer]
+        if len(customer) == 0:
+            error_handler("ERR_CUSTOMER_NOT_FOUND")
+        customer = customer[0]
+    else:
+        customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
     projects = timed.projects.get({"customer": customer["id"]})
     # select a project
-    project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
+    if project:
+        project = [p for p in projects if p["attributes"]["name"] == project]
+        if len(project) == 0:
+            error_handler("ERR_PROJECT_NOT_FOUND")
+        project = project[0]
+    else:
+        project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
     tasks = timed.tasks.get({"project": project["id"]})
     # select a task
-    task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
+    if task:
+        task = [t for t in tasks if t["attributes"]["name"] == task]
+        if len(task) == 0:
+            error_handler("ERR_TASK_NOT_FOUND")
+        task = task[0]
+    else:
+        task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
     # create the activity
     res = timed.activities.start(
         attributes={"comment": comment}, relationships={"task": task["id"]}
