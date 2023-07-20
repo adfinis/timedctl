@@ -451,13 +451,15 @@ def show(aliases=["s", "get", "info"]):
         error_handler("ERR_NO_CURRENT_ACTIVITY")
 
 
-@activity.command()
-def generate_timesheet(aliases=["gts", "ts", "timesheet", "generate"]):
+@activity.command(aliases=["gts", "ts"])
+def generate_timesheet():
     """Generate the timesheet of the current activities."""
     activities = timed.activities.get()
     if activities:
         for activity in activities:
             if not activity["attributes"]["transferred"]:
+                if not activity["attributes"]["to-time"]:
+                    activity["attributes"]["to-time"] = datetime.now()
                 from_time = activity["attributes"]["from-time"]
                 to_time = activity["attributes"]["to-time"]
                 duration = to_time - from_time
