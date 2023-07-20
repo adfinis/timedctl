@@ -512,7 +512,7 @@ def generate_timesheet():
         for activity in activities:
             if not activity["attributes"]["transferred"]:
                 if not activity["attributes"]["to-time"]:
-                    activity["attributes"]["to-time"] = datetime.now()
+                    activity["attributes"]["to-time"] = datetime.datetime.now()
                 from_time = activity["attributes"]["from-time"]
                 to_time = activity["attributes"]["to-time"]
                 duration = to_time - from_time
