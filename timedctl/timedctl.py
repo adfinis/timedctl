@@ -439,6 +439,8 @@ def activity():
 @click.option("--task", default=None)
 def start(comment, customer, project, task):
     """Start recording activity."""
+    if timed.activities.current:
+        error_handler("ERR_ACTIVITY_ALREADY_RUNNING")
     customers = timed.customers.get()
     # ask the user to select a customer
     msg("Select a customer")
@@ -488,7 +490,7 @@ def stop(aliases=["end", "finish"]):
     if not timed.activities.current:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
     else:
-        timed.activities.stop()
+        print(timed.activities.stop())
     msg("Activity stopped successfully.")
 
 
@@ -524,8 +526,9 @@ def generate_timesheet():
                     },
                     {"task": task},
                 )
+                activity["attributes"]["transferred"] = True
                 timed.activities.patch(
-                    activity["id"], {"transferred": True}, {"task": task}
+                    activity["id"], activity["attributes"], {"task": task}
                 )
         msg("Timesheet generated successfully.")
     else:
