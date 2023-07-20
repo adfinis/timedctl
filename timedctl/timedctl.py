@@ -114,7 +114,7 @@ def fzf_wrapper(objects, title_key_array, prompt):
 def time_picker(default=None):
     """Interactively pick a time using either arrow keys or typing."""
     res = ""
-    while not re.match(r"^\d{2}:\d{2}:\d{2}$", res):
+    while not re.match(r"^\d{1,2}:\d{2}:\d{2}$", res):
         rich.print("[bold green]Duration[/bold green] (hh:mm:ss)", end="")
         res = click.prompt("", default=default)
     return res
@@ -232,7 +232,7 @@ def get_reports(date):
 def get_activities(date):
     """Get activities."""
     activities = timed.activities.get(
-        {"day": date}, include="task,task.project,task.project.customer"
+        {"day": date}, include="task,task.project,task.project.customer",
     )
     table = [["Activity", "Comment", "Start", "End"]]
     for activity in activities:
