@@ -2,6 +2,21 @@
 
 
 
+## v3.4.0 (2023-07-20)
+
+### Chore
+
+* chore: Add AUR release info ([`079fbee`](https://github.com/adfinis/timedctl/commit/079fbee6bf44b3fd89e550894fe72199416a7e5a))
+
+### Feature
+
+* feat: Allow running activities to be converted into reports ([`21d96c5`](https://github.com/adfinis/timedctl/commit/21d96c5d9bff4b66bd469d5f1a2069061a7d10cd))
+
+### Fix
+
+* fix: Add logic to stop function ([`804e510`](https://github.com/adfinis/timedctl/commit/804e51080fed21cee6ea9b2d204ddb6a8953bba7))
+
+
 ## v3.3.0 (2023-07-20)
 
 ### Chore
