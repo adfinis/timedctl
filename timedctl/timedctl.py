@@ -204,10 +204,10 @@ def get_reports(date):
         task_obj = report["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
-        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"])
+        project_obj = timed.projects.get_cached(id=task_obj["relationships"]["project"]["id"])
         project = project_obj["attributes"]["name"]
 
-        customer_obj = timed.customers.get(
+        customer_obj = timed.customers.get_cached(
             id=project_obj["relationships"]["customer"]["data"]["id"]
         )
         customer = customer_obj["attributes"]["name"]
