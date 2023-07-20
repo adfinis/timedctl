@@ -485,6 +485,10 @@ def start(comment, customer, project, task):
 @activity.command()
 def stop(aliases=["end", "finish"]):
     """Stop current activity."""
+    if not timed.activities.current:
+        error_handler("ERR_NO_CURRENT_ACTIVITY")
+    else:
+        timed.activities.stop()
     msg("Activity stopped successfully.")
 
 
