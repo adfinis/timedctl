@@ -2,6 +2,25 @@
 
 
 
+## v3.3.0 (2023-07-20)
+
+### Chore
+
+* chore: Update aur package ([`34bb997`](https://github.com/adfinis/timedctl/commit/34bb9974bc2725210ed530fce9c853010032c56c))
+
+### Feature
+
+* feat: Add CLI arguments for activity start ([`1a13703`](https://github.com/adfinis/timedctl/commit/1a1370385728d7ab3ebdd07895fb240855723b11))
+
+* feat: Add CLI arguments for report creation ([`c7e08ac`](https://github.com/adfinis/timedctl/commit/c7e08ac55435c30633826b73010997d6b3e44e67))
+
+### Fix
+
+* fix: Fix timepicker regex ([`517a828`](https://github.com/adfinis/timedctl/commit/517a8283d8d5da7ef1ebbdfd7f3deef66e80426d))
+
+* fix: Add aliases for generate-timesheet ([`83e0307`](https://github.com/adfinis/timedctl/commit/83e0307cd4d983ba00862e66e42a0d411fee24de))
+
+
 ## v3.2.0 (2023-07-19)
 
 ### Feature
