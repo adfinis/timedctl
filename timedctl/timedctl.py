@@ -2,7 +2,6 @@
 """CLI application for libtimed."""
 
 import datetime
-import tomllib
 import os
 import re
 import sys
@@ -11,10 +10,11 @@ import click
 import pyfzf
 import rich
 import terminaltables
+import tomllib
 from click_aliases import ClickAliasedGroup
-from tomlkit import dump
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
+from tomlkit import dump
 
 
 def load_config():
@@ -232,11 +232,12 @@ def get_reports(date):
 def get_activities(date):
     """Get activities."""
     activities = timed.activities.get(
-        {"day": date}, include="task,task.project,task.project.customer",
+        {"day": date},
+        include="task,task.project,task.project.customer",
     )
     table = [["Activity", "Comment", "Start", "End"]]
-    for activity in activities:
-        task_obj = activity["relationships"]["task"]
+    for activity_obj in activities:
+        task_obj = activity_obj["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
         project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"])
@@ -250,10 +251,10 @@ def get_activities(date):
         table.append(
             [
                 f"{customer} > {project} > {task}",
-                activity["attributes"]["comment"],
-                activity["attributes"]["from-time"].strftime("%H:%M:%S"),
-                activity["attributes"]["to-time"].strftime("%H:%M:%S")
-                if activity["attributes"]["to-time"] is not None
+                activity_obj["attributes"]["comment"],
+                activity_obj["attributes"]["from-time"].strftime("%H:%M:%S"),
+                activity_obj["attributes"]["to-time"].strftime("%H:%M:%S")
+                if activity_obj["attributes"]["to-time"] is not None
                 else "active",
             ]
         )
@@ -315,7 +316,7 @@ def add():
 @click.option("--task", default=None)
 @click.option("--description", default=None)
 @click.option("--duration", default=None)
-def add_report(customer, project, task, description, duration):
+def add_report(customer, project, task, description, duration):  # pylint: disable=R0912
     """Add report(s)."""
     customers = timed.customers.get()
     # ask the user to select a customer
@@ -482,8 +483,8 @@ def start(comment, customer, project, task):
     error_handler("ERR_ACTIVITY_START_FAILED")
 
 
-@activity.command()
-def stop(aliases=["end", "finish"]):
+@activity.command(aliases=["end", "finish"])
+def stop():
     """Stop current activity."""
     if not timed.activities.current:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
@@ -492,13 +493,14 @@ def stop(aliases=["end", "finish"]):
     msg("Activity stopped successfully.")
 
 
-@activity.command()
-def show(aliases=["s", "get", "info"]):
+@activity.command(aliases=["s", "get", "info"])
+def show():
     """Show current activity."""
     current_activity = timed.activities.current
     if current_activity:
         msg(
-            f"Current activity: {current_activity['attributes']['comment']} (Since {current_activity['attributes']['from-time'].strftime('%H:%M:%S')})"
+            f"Current activity: {current_activity['attributes']['comment']} (Since "
+            + f"{current_activity['attributes']['from-time'].strftime('%H:%M:%S')})"
         )
     else:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
@@ -509,23 +511,23 @@ def generate_timesheet():
     """Generate the timesheet of the current activities."""
     activities = timed.activities.get()
     if activities:
-        for activity in activities:
-            if not activity["attributes"]["transferred"]:
-                if not activity["attributes"]["to-time"]:
-                    activity["attributes"]["to-time"] = datetime.datetime.now()
-                from_time = activity["attributes"]["from-time"]
-                to_time = activity["attributes"]["to-time"]
+        for activity_obj in activities:
+            if not activity_obj["attributes"]["transferred"]:
+                if not activity_obj["attributes"]["to-time"]:
+                    activity_obj["attributes"]["to-time"] = datetime.datetime.now()
+                from_time = activity_obj["attributes"]["from-time"]
+                to_time = activity_obj["attributes"]["to-time"]
                 duration = to_time - from_time
-                task = activity["relationships"]["task"]["data"]["id"]
+                task = activity_obj["relationships"]["task"]["data"]["id"]
                 timed.reports.post(
                     {
                         "duration": duration,
-                        "comment": activity["attributes"]["comment"],
+                        "comment": activity_obj["attributes"]["comment"],
                     },
                     {"task": task},
                 )
                 timed.activities.patch(
-                    activity["id"], {"transferred": True}, {"task": task}
+                    activity_obj["id"], {"transferred": True}, {"task": task}
                 )
         msg("Timesheet generated successfully.")
     else:
