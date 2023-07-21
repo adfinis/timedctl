@@ -204,11 +204,12 @@ def get_reports(date):
         task_obj = report["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
-        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"])
+        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"], cached=True)
         project = project_obj["attributes"]["name"]
 
         customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"]
+            id=project_obj["relationships"]["customer"]["data"]["id"],
+            cached=True
         )
         customer = customer_obj["attributes"]["name"]
 
@@ -240,11 +241,12 @@ def get_activities(date):
         task_obj = activity_obj["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
-        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"])
+        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"], cached=True)
         project = project_obj["attributes"]["name"]
 
         customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"]
+            id=project_obj["relationships"]["customer"]["data"]["id"],
+            cached=True
         )
         customer = customer_obj["attributes"]["name"]
 
@@ -318,7 +320,7 @@ def add():
 @click.option("--duration", default=None)
 def add_report(customer, project, task, description, duration):  # pylint: disable=R0912
     """Add report(s)."""
-    customers = timed.customers.get()
+    customers = timed.customers.get(cached=True)
     # ask the user to select a customer
     msg("Select a customer")
     # select a customer
@@ -330,7 +332,7 @@ def add_report(customer, project, task, description, duration):  # pylint: disab
     else:
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
-    projects = timed.projects.get({"customer": customer["id"]})
+    projects = timed.projects.get({"customer": customer["id"]}, cached=True)
     # select a project
     if project:
         project = [p for p in projects if p["attributes"]["name"] == project]
@@ -340,7 +342,7 @@ def add_report(customer, project, task, description, duration):  # pylint: disab
     else:
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
-    tasks = timed.tasks.get({"project": project["id"]})
+    tasks = timed.tasks.get({"project": project["id"]}, cached=True)
     # select a task
     if task:
         task = [t for t in tasks if t["attributes"]["name"] == task]
@@ -440,7 +442,7 @@ def activity():
 @click.option("--task", default=None)
 def start(comment, customer, project, task):
     """Start recording activity."""
-    customers = timed.customers.get()
+    customers = timed.customers.get(cached=True)
     # ask the user to select a customer
     msg("Select a customer")
     # select a customer
@@ -452,7 +454,7 @@ def start(comment, customer, project, task):
     else:
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
-    projects = timed.projects.get({"customer": customer["id"]})
+    projects = timed.projects.get({"customer": customer["id"]}, cached=True)
     # select a project
     if project:
         project = [p for p in projects if p["attributes"]["name"] == project]
@@ -462,7 +464,7 @@ def start(comment, customer, project, task):
     else:
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
-    tasks = timed.tasks.get({"project": project["id"]})
+    tasks = timed.tasks.get({"project": project["id"]}, cached=True)
     # select a task
     if task:
         task = [t for t in tasks if t["attributes"]["name"] == task]
