@@ -2,6 +2,29 @@
 
 
 
+## v3.5.1 (2023-07-21)
+
+### Chore
+
+* chore: Update AUR package ([`e92d41b`](https://github.com/adfinis/timedctl/commit/e92d41b596594e6388e2c0d12f644474383fcba8))
+
+* chore: fix alexjs ([`ee5fea1`](https://github.com/adfinis/timedctl/commit/ee5fea14a0621b82259bea889082d6af033fa89b))
+
+* chore: Update AUR package ([`cfa5a50`](https://github.com/adfinis/timedctl/commit/cfa5a503bee7adc9d361ce113da6b52bb56f342f))
+
+### Fix
+
+* fix(timedctl.py): activity shorthand
+
+Signed-off-by: Toni Tauro &lt;toni.tauro@adfinis.com&gt; ([`4fdaca3`](https://github.com/adfinis/timedctl/commit/4fdaca35a764f0363ad06fcea87049cd778ace3e))
+
+### Unknown
+
+* Merge pull request #20 from adfinis/fix/same-shorthand-19
+
+fix(timedctl.py): activity shorthand ([`21e8903`](https://github.com/adfinis/timedctl/commit/21e8903e823ab107a2f4961f56401eb435662a6f))
+
+
 ## v3.5.0 (2023-07-21)
 
 ### Chore
