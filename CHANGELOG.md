@@ -2,6 +2,31 @@
 
 
 
+## v3.5.0 (2023-07-21)
+
+### Chore
+
+* chore: Fix linting issues ([`09fbb25`](https://github.com/adfinis/timedctl/commit/09fbb25904fbaef194bb8e04a162a42b4f95e0a8))
+
+* chore: Fix alexjs job name ([`ec42c89`](https://github.com/adfinis/timedctl/commit/ec42c89326a00eab957a897b795debf523f0b248))
+
+* chore: Switch to ruff ([`460fc4d`](https://github.com/adfinis/timedctl/commit/460fc4d9b62d014a0179554c1dce75c563a8c196))
+
+### Feature
+
+* feat: Add caching ([`c722389`](https://github.com/adfinis/timedctl/commit/c722389f441bd4eb807cdb92ba3b47c01519ad67))
+
+### Fix
+
+* fix: Update dependencies and more caching options ([`9fc2d74`](https://github.com/adfinis/timedctl/commit/9fc2d7480a42211b0992e59e0dd0e0c5a6d58e07))
+
+### Unknown
+
+* Merge pull request #11 from adfinis/add_cache
+
+DRAFT: feat: Add caching for project creation ([`92212ec`](https://github.com/adfinis/timedctl/commit/92212ecb661683a55779123e35a23da742418893))
+
+
 ## v3.4.0 (2023-07-20)
 
 ### Chore
