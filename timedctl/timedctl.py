@@ -435,7 +435,7 @@ def activity():
     pass  # pylint: disable=W0107
 
 
-@activity.command(aliases=["add", "s"])
+@activity.command(aliases=["add", "a"])
 @click.argument("comment")
 @click.option("--customer", default=None)
 @click.option("--project", default=None)
