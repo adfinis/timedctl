@@ -18,5 +18,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           message_id: 'alex'
           pr_only: false
-      - name: Alex Recommends
-        uses: brown-ccv/alex-recommends@v1.2.1
