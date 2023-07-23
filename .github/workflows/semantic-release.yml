@@ -63,7 +63,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
         uses: jbouter/aur-releaser@v0.0.9
         with:
-          pkgname: timedctl-git
+          pkgname: timedctl
           pkgbuild: ./aur/PKGBUILD
           commit_username: ${{ secrets.AUR_USERNAME }}
           commit_email: ${{ secrets.AUR_EMAIL }}
