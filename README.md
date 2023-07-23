@@ -12,9 +12,10 @@ Create a config file at `$XDG_CONFIG_HOME/timedctl/config.toml`.
 The following values must be set:
 ```toml
 username = "<your username>"
-oidc_client_id = "<your oidc client id>"
-oidc_auth_endpoint = "<your oidc auth endpoint>"
-oidc_token_endpoint = "<your oidc token endpoint>"
+timed_url = "<timed url>"
+sso_url = "<sso url>"
+sso_realm = "<sso realm>"
+sso_client_id = "<client id>"
 ```
 
 ## License
