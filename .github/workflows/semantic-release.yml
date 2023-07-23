@@ -50,7 +50,7 @@ jobs:
         name: Switch to new release
         if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
         with:
-          ref: refs/tags/${{ steps.semrel.outputs.version }}
+          ref: refs/tags/v${{ steps.semrel.outputs.version }}
 
       - name: Publish release to pypi
         if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
