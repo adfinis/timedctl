@@ -2,8 +2,14 @@
 name: Poetry release
 
 on:
+  pull_request:
   push:
-    tags: ["*"]
+    branches: [main]
+    tags:
+      - '*'
+  release:
+    types: [created]
+
 
 jobs:
   publish:

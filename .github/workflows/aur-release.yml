@@ -2,16 +2,14 @@
 name: AUR Release
 
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [created]
 
 jobs:
   aur-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
       - name: Release AUR package
         uses: jbouter/aur-releaser@<TAG>
         with:
