@@ -1,5 +1,5 @@
 ---
-name: aur-release
+name: AUR Release
 
 on:
   push:
