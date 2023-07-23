@@ -54,3 +54,19 @@ jobs:
       - name: Publish release to pypi
         if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
         run: poetry publish --build --no-interaction
+
+      - name: Update AUR version
+        if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
+        run: sed -i "s/pkgver=.*/pkgver=${{ steps.semrel.outputs.version }}/g" ./aur/PKGBUILD
+
+      - name: Release AUR package
+        if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
+        uses: jbouter/aur-releaser@v0.0.9
+        with:
+          pkgname: timedctl-git
+          pkgbuild: ./aur/PKGBUILD
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: Update AUR package
+          ssh_keyscan_types: rsa,dsa,ecdsa,ed25519
