@@ -204,12 +204,13 @@ def get_reports(date):
         task_obj = report["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
-        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"], cached=True)
+        project_obj = timed.projects.get(
+            id=task_obj["relationships"]["project"]["id"], cached=True
+        )
         project = project_obj["attributes"]["name"]
 
         customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"],
-            cached=True
+            id=project_obj["relationships"]["customer"]["data"]["id"], cached=True
         )
         customer = customer_obj["attributes"]["name"]
 
@@ -241,12 +242,13 @@ def get_activities(date):
         task_obj = activity_obj["relationships"]["task"]
         task = task_obj["attributes"]["name"]
 
-        project_obj = timed.projects.get(id=task_obj["relationships"]["project"]["id"], cached=True)
+        project_obj = timed.projects.get(
+            id=task_obj["relationships"]["project"]["id"], cached=True
+        )
         project = project_obj["attributes"]["name"]
 
         customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"],
-            cached=True
+            id=project_obj["relationships"]["customer"]["data"]["id"], cached=True
         )
         customer = customer_obj["attributes"]["name"]
 
@@ -319,7 +321,9 @@ def add():
 @click.option("--description", default=None)
 @click.option("--duration", default=None)
 @click.option("--show-archived", default=False, is_flag=True)
-def add_report(customer, project, task, description, duration, show_archived):  # pylint: disable=R0912
+def add_report(
+    customer, project, task, description, duration, show_archived
+):  # pylint: disable=R0912
     """Add report(s)."""
     # ask the user to select a customer
     msg("Select a customer")
