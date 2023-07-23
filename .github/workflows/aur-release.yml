@@ -3,7 +3,7 @@ name: AUR Release
 
 on:
   release:
-    types: [published]
+    types: [released]
 
 jobs:
   aur-release:
@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Release AUR package
-        uses: jbouter/aur-releaser@<TAG>
+        uses: jbouter/aur-releaser@v0.0.9
         with:
           pkgname: timedctl-git
           pkgbuild: ./aur/PKGBUILD
