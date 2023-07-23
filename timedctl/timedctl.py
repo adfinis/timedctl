@@ -318,12 +318,13 @@ def add():
 @click.option("--task", default=None)
 @click.option("--description", default=None)
 @click.option("--duration", default=None)
-def add_report(customer, project, task, description, duration):  # pylint: disable=R0912
+@click.option("--show-archived", default=False, is_flag=True)
+def add_report(customer, project, task, description, duration, show_archived):  # pylint: disable=R0912
     """Add report(s)."""
-    customers = timed.customers.get(cached=True)
     # ask the user to select a customer
     msg("Select a customer")
     # select a customer
+    customers = timed.customers.get(cached=True)
     if customer:
         customer = [c for c in customers if c["attributes"]["name"] == customer]
         if len(customer) == 0:
@@ -332,7 +333,9 @@ def add_report(customer, project, task, description, duration):  # pylint: disab
     else:
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
-    projects = timed.projects.get({"customer": customer["id"]}, cached=True)
+    projects = timed.projects.get(
+        {"customer": customer["id"]}, filters={"archived": show_archived}, cached=True
+    )
     # select a project
     if project:
         project = [p for p in projects if p["attributes"]["name"] == project]
@@ -342,7 +345,9 @@ def add_report(customer, project, task, description, duration):  # pylint: disab
     else:
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
-    tasks = timed.tasks.get({"project": project["id"]}, cached=True)
+    tasks = timed.tasks.get(
+        {"project": project["id"]}, filters={"archived": show_archived, cached=True}
+    )
     # select a task
     if task:
         task = [t for t in tasks if t["attributes"]["name"] == task]
@@ -440,9 +445,10 @@ def activity():
 @click.option("--customer", default=None)
 @click.option("--project", default=None)
 @click.option("--task", default=None)
-def start(comment, customer, project, task):
+@click.option("--show-archived", default=False, is_flag=True)
+def start(comment, customer, project, task, show_archived):
     """Start recording activity."""
-    customers = timed.customers.get(cached=True)
+    customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
     # ask the user to select a customer
     msg("Select a customer")
     # select a customer
@@ -454,7 +460,9 @@ def start(comment, customer, project, task):
     else:
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
-    projects = timed.projects.get({"customer": customer["id"]}, cached=True)
+    projects = timed.projects.get(
+        {"customer": customer["id"]}, filters={"archived": show_archived, cached=True}
+    )
     # select a project
     if project:
         project = [p for p in projects if p["attributes"]["name"] == project]
@@ -464,7 +472,9 @@ def start(comment, customer, project, task):
     else:
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
-    tasks = timed.tasks.get({"project": project["id"]}, cached=True)
+    tasks = timed.tasks.get(
+        {"project": project["id"]}, filters={"archived": show_archived}, cached=True
+    )
     # select a task
     if task:
         task = [t for t in tasks if t["attributes"]["name"] == task]
