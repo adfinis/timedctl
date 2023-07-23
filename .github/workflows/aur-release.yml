@@ -3,7 +3,7 @@ name: AUR Release
 
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   aur-release:
