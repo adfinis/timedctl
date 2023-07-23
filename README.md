@@ -9,6 +9,7 @@ Build the project with `poetry build` and install it with `pip install dist/time
 
 ## Configuration
 Create a config file at `$XDG_CONFIG_HOME/timedctl/config.toml`.
+
 The following values must be set:
 ```toml
 username = "<your username>"
