@@ -1,19 +1,17 @@
 ---
-name: aur-release
+name: AUR Release
 
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [released]
 
 jobs:
   aur-release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
       - name: Release AUR package
-        uses: jbouter/aur-releaser@<TAG>
+        uses: jbouter/aur-releaser@v0.0.9
         with:
           pkgname: timedctl-git
           pkgbuild: ./aur/PKGBUILD
