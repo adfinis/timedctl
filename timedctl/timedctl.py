@@ -133,7 +133,7 @@ def time_sum(arr):
 def select_report(date):
     """FZF prompt to select a report."""
     reports = timed.reports.get(
-        {"date": date}, include="task,task.project,task.project.customer"
+        filters={"date": date}, include="task,task.project,task.project.customer"
     )
     report_view = []
     for report in reports:
@@ -197,7 +197,7 @@ def get_overtime(date):
 def get_reports(date):
     """Get reports."""
     reports = timed.reports.get(
-        {"date": date}, include="task,task.project,task.project.customer"
+        filters={"date": date}, include="task,task.project,task.project.customer"
     )
     table = [["Customer", "Project", "Task", "Comment", "Duration"]]
     for report in reports:
@@ -234,7 +234,7 @@ def get_reports(date):
 def get_activities(date):
     """Get activities."""
     activities = timed.activities.get(
-        {"day": date},
+        filters={"day": date},
         include="task,task.project,task.project.customer",
     )
     table = [["Activity", "Comment", "Start", "End"]]
@@ -328,7 +328,7 @@ def add_report(
     # ask the user to select a customer
     msg("Select a customer")
     # select a customer
-    customers = timed.customers.get(cached=True)
+    customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
     if customer:
         customer = [c for c in customers if c["attributes"]["name"] == customer]
         if len(customer) == 0:
@@ -338,7 +338,7 @@ def add_report(
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
     projects = timed.projects.get(
-        {"customer": customer["id"]}, filters={"archived": show_archived}, cached=True
+        filters={"customer": customer["id"], "archived": show_archived}, cached=True
     )
     # select a project
     if project:
@@ -350,7 +350,7 @@ def add_report(
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
     tasks = timed.tasks.get(
-        {"project": project["id"]}, filters={"archived": show_archived}, cached=True
+        filters={"project": project["id"], "archived": show_archived}, cached=True
     )
     # select a task
     if task:
@@ -465,7 +465,7 @@ def start(comment, customer, project, task, show_archived):
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
     projects = timed.projects.get(
-        {"customer": customer["id"]}, filters={"archived": show_archived}, cached=True
+        filters={"customer": customer["id"], "archived": show_archived}, cached=True
     )
     # select a project
     if project:
@@ -477,7 +477,7 @@ def start(comment, customer, project, task, show_archived):
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
     tasks = timed.tasks.get(
-        {"project": project["id"]}, filters={"archived": show_archived}, cached=True
+        filters={"project": project["id"], "archived": show_archived}, cached=True
     )
     # select a task
     if task:
