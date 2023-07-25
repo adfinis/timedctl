@@ -503,13 +503,13 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 
 [[package]]
 name = "libtimed"
-version = "0.4.1"
+version = "0.4.3"
 description = "Library to intreact with timed webapp."
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "libtimed-0.4.1-py3-none-any.whl", hash = "sha256:65bb56c628fa5542687610130d6499240bca251aecbaa3e5dd64e2977755d415"},
-    {file = "libtimed-0.4.1.tar.gz", hash = "sha256:453e50cd285893634391a20d56eb7646a440a1566a24aa2277404c0f5aa4ccae"},
+    {file = "libtimed-0.4.3-py3-none-any.whl", hash = "sha256:276b21114b52b10443017e124049e51f95e62757885eca4540f14ce65ed26ce9"},
+    {file = "libtimed-0.4.3.tar.gz", hash = "sha256:41a7a3d54725cbab1a8b7a9e9739edeb221c3302bc3b5c05c83d825b95781707"},
 ]
 
 [package.dependencies]
@@ -917,4 +917,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "17cd87960f80796286db76d7f99047c5b898ba4201b996af69866b5e7e4ecbcb"
+content-hash = "2de9a8d57118b78e060ee2dd45a3af1457ecdb9b5ba537edd3afe13785f16dc0"
