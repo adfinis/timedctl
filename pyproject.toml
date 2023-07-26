@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "timedctl"
-version = "5.0.4"
+version = "5.0.5"
 description = "CLI for timed"
 authors = ["Arthur Deierlein <arthur.deierlein@adfinis.com>", "Gian Klug <gian.klug@adfinis.com>"]
 readme = "README.md"
