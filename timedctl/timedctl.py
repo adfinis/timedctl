@@ -4,17 +4,17 @@
 import datetime
 import os
 import re
-import sys
 
 import click
 import pyfzf
-import rich
 import terminaltables
 import tomllib
 from click_aliases import ClickAliasedGroup
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 from tomlkit import dump
+
+from timedctl.helpers import msg, error_handler, fzf_wrapper, time_picker, time_sum
 
 
 def load_config():
@@ -71,63 +71,6 @@ def client_setup():
     return TimedAPIClient(token, url, api_namespace)
 
 
-def msg(message, nonl=False):
-    """Print a message in bold green."""
-    rich.print(f"[bold green]{message}[/bold green]", end="" if nonl else "\n")
-
-
-def error_handler(error):
-    """Handle errors."""
-    rich.print(f"[bold red]Error: {error}[/bold red]")
-    sys.exit(1)
-
-
-def fzf_wrapper(objects, title_key_array, prompt):
-    """Wrap pyfzf."""
-    # recursively resolve the title for each object
-    # . is separator for the keys.
-    titles = []
-    for obj in objects:
-        if isinstance(title_key_array[0], int):
-            title = obj[title_key_array[0]]
-        else:
-            title = obj
-            for key in title_key_array:
-                title = title[key]
-        titles.append(title)
-    # run the fzf prompt
-    result = [*pyfzf.FzfPrompt().prompt(titles, f"--prompt='{prompt}'"), None][0]
-    # turn the results back into objects
-    for obj in objects:
-        if isinstance(title_key_array[0], int):
-            title = obj[title_key_array[0]]
-        else:
-            title = obj
-            for key in title_key_array:
-                title = title[key]
-        if title == result:
-            return obj
-    error_handler("ERR_FZF_EXCEPTION")
-    return []
-
-
-def time_picker(default=None):
-    """Interactively pick a time using either arrow keys or typing."""
-    res = ""
-    while not re.match(r"^\d{1,2}:\d{2}:\d{2}$", res):
-        rich.print("[bold green]Duration[/bold green] (hh:mm:ss)", end="")
-        res = click.prompt("", default=default)
-    return res
-
-
-def time_sum(arr):
-    """Sum up an array of time strings."""
-    total = datetime.timedelta()
-    for line in arr[1:]:
-        val = line[-1]
-        total += val
-    # format as HH:MM:SS
-    return str(total)
 
 
 def select_report(date):
@@ -528,22 +471,27 @@ def generate_timesheet():
     activities = timed.activities.get()
     if activities:
         for activity_obj in activities:
-            if not activity_obj["attributes"]["transferred"]:
-                if not activity_obj["attributes"]["to-time"]:
-                    activity_obj["attributes"]["to-time"] = datetime.datetime.now()
-                from_time = activity_obj["attributes"]["from-time"]
-                to_time = activity_obj["attributes"]["to-time"]
-                duration = to_time - from_time
+            attr = activity_obj["attributes"]
+            if not attr["transferred"]:
+                # stop running activities
+                if not attr["to-time"]:
+                    attr["to-time"] = datetime.datetime.now()
+                # calculate duration
+                duration = attr["to-time"] - attr["from-time"]
+                # get task
                 task = activity_obj["relationships"]["task"]["data"]["id"]
+                # create report
                 timed.reports.post(
                     {
                         "duration": duration,
-                        "comment": activity_obj["attributes"]["comment"],
+                        "comment": attr["comment"],
                     },
                     {"task": task},
                 )
+                # update activity to be transferred
+                attr["transferred"] = True
                 timed.activities.patch(
-                    activity_obj["id"], {"transferred": True}, {"task": task}
+                    activity_obj["id"], attr, {"task": task}
                 )
         msg("Timesheet generated successfully.")
     else:
