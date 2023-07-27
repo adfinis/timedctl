@@ -108,11 +108,10 @@ def select_report(date):
     report = fzf_wrapper(fzf_obj, [0], "Select a report: ")
     return report
 
+
 def select_activity(date):
     """FZF prompt to select an activity."""
-    activities = timed.activities.get(
-        filters={"date": date}
-    )
+    activities = timed.activities.get(filters={"date": date})
     activity_view = []
     # loop through all activities
     for activity in activities:
@@ -126,7 +125,9 @@ def select_activity(date):
             [
                 task["attributes"]["name"],
                 activity["attributes"]["comment"],
-                activity["attributes"]["from-time"].strftime("%H:%M:%S")+" - "+activity["attributes"]["to-time"].strftime("%H:%M:%S"),
+                activity["attributes"]["from-time"].strftime("%H:%M:%S")
+                + " - "
+                + activity["attributes"]["to-time"].strftime("%H:%M:%S"),
                 task["id"],
                 activity["id"],
             ]
@@ -505,6 +506,7 @@ def show_activity():
     else:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
 
+
 @activity.command("restart", aliases=["r", "continue", "resume"])
 @click.option("--date", default=None)
 def restart_activity(date):
@@ -522,10 +524,11 @@ def restart_activity(date):
         attributes={"comment": comment}, relationships={"task": task_id}
     )
     if res.status_code == 201:
-        msg(f"Activity \"{comment}\" restarted successfully.")
+        msg(f'Activity "{comment}" restarted successfully.')
         return
     # handle exception
     error_handler("ERR_ACTIVITY_START_FAILED")
+
 
 @activity.command("delete", aliases=["d", "rm", "remove"])
 @click.option("--date", default=None)
