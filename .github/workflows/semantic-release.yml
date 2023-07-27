@@ -45,7 +45,7 @@ jobs:
           default_author: github_actions
           add: pyproject.toml
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         name: Switch to new release
         if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
         with:
