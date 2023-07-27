@@ -71,8 +71,6 @@ def client_setup():
     return TimedAPIClient(token, url, api_namespace)
 
 
-
-
 def select_report(date):
     """FZF prompt to select a report."""
     reports = timed.reports.get(
@@ -469,6 +467,7 @@ def show():
 def generate_timesheet():
     """Generate the timesheet of the current activities."""
     activities = timed.activities.get()
+    reports = timed.reports.get()
     if activities:
         for activity_obj in activities:
             attr = activity_obj["attributes"]
@@ -480,19 +479,45 @@ def generate_timesheet():
                 duration = attr["to-time"] - attr["from-time"]
                 # get task
                 task = activity_obj["relationships"]["task"]["data"]["id"]
-                # create report
-                timed.reports.post(
-                    {
-                        "duration": duration,
-                        "comment": attr["comment"],
-                    },
-                    {"task": task},
-                )
+                # check if there is a report with the same comment that already exists
+                report = [
+                    x
+                    for x in reports
+                    if x["attributes"]["comment"] == attr["comment"]
+                    and x["relationships"]["task"]["data"]["id"] == task
+                ]
+                # if report has been found
+                if len(report) > 0:
+                    report = report[0]
+                    # deserialize the timedelta
+                    hours, minutes, seconds = report["attributes"]["duration"].split(
+                        ":"
+                    )
+                    old_duration = datetime.timedelta(
+                        hours=int(hours), minutes=int(minutes), seconds=int(seconds)
+                    )
+                    # calculate the new duration
+                    report["attributes"]["duration"] = old_duration + duration
+                    # update report
+                    timed.reports.patch(
+                        report["id"],
+                        report["attributes"],
+                        {"task": task},
+                    )
+                else:
+                    # create report
+                    r = timed.reports.post(
+                        {
+                            "duration": duration,
+                            "comment": attr["comment"],
+                        },
+                        {"task": task},
+                    )
+                    # append the report to the known reports
+                    reports.append(r.json()["data"])
                 # update activity to be transferred
                 attr["transferred"] = True
-                timed.activities.patch(
-                    activity_obj["id"], attr, {"task": task}
-                )
+                timed.activities.patch(activity_obj["id"], attr, {"task": task})
         msg("Timesheet generated successfully.")
     else:
         error_handler("ERR_NO_ACTIVITIES")
