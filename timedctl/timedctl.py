@@ -108,6 +108,49 @@ def select_report(date):
     report = fzf_wrapper(fzf_obj, [0], "Select a report: ")
     return report
 
+def select_activity(date):
+    """FZF prompt to select an activity."""
+    activities = timed.activities.get(
+        filters={"date": date}
+    )
+    activity_view = []
+    # loop through all activities
+    for activity in activities:
+        # check if there is an actual task, else use an unknown task
+        task_data = activity["relationships"]["task"]["data"]
+        if task_data:
+            task = timed.tasks.get(id=task_data["id"], cached=True)
+        else:
+            task = {"attributes": {"name": "Unknown task"}, "id": None}
+        activity_view.append(
+            [
+                task["attributes"]["name"],
+                activity["attributes"]["comment"],
+                activity["attributes"]["from-time"].strftime("%H:%M:%S")+" - "+activity["attributes"]["to-time"].strftime("%H:%M:%S"),
+                task["id"],
+                activity["id"],
+            ]
+        )
+    # get longest key per value
+    max_key_lengths = [max(map(len, col)) for col in zip(*activity_view)]
+    # pad all the values
+    activity_view = [
+        [
+            activity_view[i][j].ljust(max_key_lengths[j])
+            for j in range(len(activity_view[i]))
+        ]
+        for i in range(len(activity_view))
+    ]
+    # create a list for fzf
+    fzf_obj = []
+    for row in activity_view:
+        fzf_obj.append(
+            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]]
+        )
+
+    activity = fzf_wrapper(fzf_obj, [0], "Select an activity: ")
+    return activity
+
 
 timed = client_setup()
 
@@ -385,13 +428,13 @@ def activity():
     pass  # pylint: disable=W0107
 
 
-@activity.command(aliases=["add", "a"])
+@activity.command("start", aliases=["add", "a"])
 @click.argument("comment")
 @click.option("--customer", default=None)
 @click.option("--project", default=None)
 @click.option("--task", default=None)
 @click.option("--show-archived", default=False, is_flag=True)
-def start(comment, customer, project, task, show_archived):
+def start_activity(comment, customer, project, task, show_archived):
     """Start recording activity."""
     customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
     # ask the user to select a customer
@@ -440,8 +483,8 @@ def start(comment, customer, project, task, show_archived):
     error_handler("ERR_ACTIVITY_START_FAILED")
 
 
-@activity.command(aliases=["end", "finish"])
-def stop():
+@activity.command("stop", aliases=["end", "finish"])
+def stop_activity():
     """Stop current activity."""
     if not timed.activities.current:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
@@ -450,8 +493,8 @@ def stop():
     msg("Activity stopped successfully.")
 
 
-@activity.command(aliases=["s", "get", "info"])
-def show():
+@activity.command("show", aliases=["s", "get", "info"])
+def show_activity():
     """Show current activity."""
     current_activity = timed.activities.current
     if current_activity:
@@ -462,9 +505,42 @@ def show():
     else:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
 
+@activity.command("restart", aliases=["r", "continue", "resume"])
+@click.option("--date", default=None)
+def restart_activity(date):
+    """Restart an activity."""
+    # stop current activity first
+    if timed.activities.current:
+        timed.activities.stop()
+        msg("Stopped current activity.")
+    # select an activity
+    activity = select_activity(date)
+    # grab attributes
+    comment = activity[1]
+    task_id = activity[3]
+    res = timed.activities.start(
+        attributes={"comment": comment}, relationships={"task": task_id}
+    )
+    if res.status_code == 201:
+        msg(f"Activity \"{comment}\" restarted successfully.")
+        return
+    # handle exception
+    error_handler("ERR_ACTIVITY_START_FAILED")
 
-@activity.command(aliases=["gts", "ts"])
-def generate_timesheet():
+@activity.command("delete", aliases=["d", "rm", "remove"])
+@click.option("--date", default=None)
+def delete_activity(date):
+    """Delete an activity."""
+    # select an activity
+    activity = select_activity(date)
+    if timed.activities.delete(activity[-1]):
+        msg(f"Activity {activity[1]} deleted successfully.")
+        return
+    error_handler("ERR_ACTIVITY_DELETE_FAILED")
+
+
+@activity.command("generate-timesheet", aliases=["gts", "ts"])
+def activity_generate_timesheet():
     """Generate the timesheet of the current activities."""
     activities = timed.activities.get()
     reports = timed.reports.get()
