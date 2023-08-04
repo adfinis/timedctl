@@ -22,6 +22,7 @@ black = "^23.3.0"
 pytest = "^7.3.2"
 isort = "^5.12.0"
 flake8 = "^6.0.0"
+ruff = "^0.0.282"
 
 [build-system]
 requires = ["poetry-core"]
@@ -37,3 +38,13 @@ version_toml = [
 major_on_zero = false
 branch = "main"
 build_command = "pip install poetry && poetry build"
+
+[tool.ruff]
+# TODO: add "ANN" again in the future
+select = ["E", "F", "C4", "PL", "C90", "I", "N", "UP", "B", "S", "A",  "COM", "PT", "Q", "T20", "SLF", "TD", "FIX",  "PIE"]
+# same as black
+line-length = 88
+format = "github"
+fixable = ["ALL"]
+# ignore these for now
+ignore = ["PLR0913", "C901", "PLR0912"]
