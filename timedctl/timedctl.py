@@ -15,12 +15,12 @@ from libtimed.oidc import OIDCClient
 from tomlkit import dump
 
 from timedctl.helpers import (
-    msg,
     error_handler,
     fzf_wrapper,
+    msg,
+    output_formatted,
     time_picker,
     time_sum,
-    output_formatted,
 )
 
 
@@ -36,10 +36,10 @@ def load_config():
 
     # Get the path to the config file based on the $XDG_config_HOME environment variable
     if not os.getenv("HOME"):
-        raise EnvironmentError("$HOME is not set")
+        raise OSError("$HOME is not set")
 
     xdg_config_home = os.getenv(
-        "XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config")
+        "XDG_CONFIG_HOME", os.path.join(os.getenv("HOME"), ".config"),
     )
     config_dir = os.path.join(xdg_config_home, "timedctl")
     config_file = os.path.join(config_dir, "config.toml")
@@ -81,7 +81,7 @@ def client_setup():
 def select_report(date):
     """FZF prompt to select a report."""
     reports = timed.reports.get(
-        filters={"date": date}, include="task,task.project,task.project.customer"
+        filters={"date": date}, include="task,task.project,task.project.customer",
     )
     report_view = []
     for report in reports:
@@ -93,7 +93,7 @@ def select_report(date):
                 str(report["attributes"]["duration"]),
                 task["id"],
                 report["id"],
-            ]
+            ],
         )
     # get longest key per value
     max_key_lengths = [max(map(len, col)) for col in zip(*report_view)]
@@ -109,7 +109,7 @@ def select_report(date):
     fzf_obj = []
     for row in report_view:
         fzf_obj.append(
-            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]]
+            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
         )
 
     report = fzf_wrapper(fzf_obj, [0], "Select a report: ")
@@ -137,7 +137,7 @@ def select_activity(date):
                 + activity["attributes"]["to-time"].strftime("%H:%M:%S"),
                 task["id"],
                 activity["id"],
-            ]
+            ],
         )
     # get longest key per value
     max_key_lengths = [max(map(len, col)) for col in zip(*activity_view)]
@@ -153,7 +153,7 @@ def select_activity(date):
     fzf_obj = []
     for row in activity_view:
         fzf_obj.append(
-            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]]
+            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
         )
 
     activity = fzf_wrapper(fzf_obj, [0], "Select an activity: ")
@@ -167,12 +167,12 @@ def format_activity(activity):
     task = task_obj["attributes"]["name"]
 
     project_obj = timed.projects.get(
-        id=task_obj["relationships"]["project"]["id"], cached=True
+        id=task_obj["relationships"]["project"]["id"], cached=True,
     )
     project = project_obj["attributes"]["name"]
 
     customer_obj = timed.customers.get(
-        id=project_obj["relationships"]["customer"]["data"]["id"], cached=True
+        id=project_obj["relationships"]["customer"]["data"]["id"], cached=True,
     )
     customer = customer_obj["attributes"]["name"]
     return f"{customer} > {project} > {task}"
@@ -184,19 +184,19 @@ timed = client_setup()
 @click.group(cls=ClickAliasedGroup)
 def timedctl():
     """Use timedctl."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @timedctl.group(cls=ClickAliasedGroup, aliases=["g", "show", "describe"])
 def get():
     """Get different things."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @get.group(cls=ClickAliasedGroup)
 def data():
     """Get raw data for building custom scripts."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @data.command("customers")
@@ -283,7 +283,7 @@ def get_overtime(date):
 def get_reports(date):
     """Get reports."""
     reports = timed.reports.get(
-        filters={"date": date}, include="task,task.project,task.project.customer"
+        filters={"date": date}, include="task,task.project,task.project.customer",
     )
     table = [["Customer", "Project", "Task", "Comment", "Duration"]]
     for report in reports:
@@ -291,12 +291,12 @@ def get_reports(date):
         task = task_obj["attributes"]["name"]
 
         project_obj = timed.projects.get(
-            id=task_obj["relationships"]["project"]["id"], cached=True
+            id=task_obj["relationships"]["project"]["id"], cached=True,
         )
         project = project_obj["attributes"]["name"]
 
         customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"], cached=True
+            id=project_obj["relationships"]["customer"]["data"]["id"], cached=True,
         )
         customer = customer_obj["attributes"]["name"]
 
@@ -307,7 +307,7 @@ def get_reports(date):
                 task,
                 report["attributes"]["comment"],
                 report["attributes"]["duration"],
-            ]
+            ],
         )
     output = terminaltables.SingleTable(table)
     msg(f"Reports for {date if date is not None else 'today'}:")
@@ -333,7 +333,7 @@ def get_activities(date):
                 activity_obj["attributes"]["to-time"].strftime("%H:%M:%S")
                 if activity_obj["attributes"]["to-time"] is not None
                 else "active",
-            ]
+            ],
         )
     output = terminaltables.SingleTable(table)
     msg(f"Activities for {date if date is not None else 'today'}:")
@@ -348,7 +348,7 @@ def get_absences():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["rm", "d", "remove", "del"])
 def delete():
     """Delete different things."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @delete.command("report", aliases=["r"])
@@ -357,7 +357,7 @@ def delete_report(date):
     """Delete report(s)."""
     report = select_report(date)
     res = pyfzf.FzfPrompt().prompt(
-        ["Yes", "No"], f"--prompt 'Are you sure? Delete \"{report[1]}\"?'"
+        ["Yes", "No"], f"--prompt 'Are you sure? Delete \"{report[1]}\"?'",
     )
     if res[0] == "Yes":
         req = timed.reports.delete(report[-1])
@@ -384,7 +384,7 @@ def delete_absence():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["a", "create"])
 def add():
     """Add different things."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @add.command("report", aliases=["r"])
@@ -395,7 +395,7 @@ def add():
 @click.option("--duration", default=None)
 @click.option("--show-archived", default=False, is_flag=True)
 def add_report(
-    customer, project, task, description, duration, show_archived
+    customer, project, task, description, duration, show_archived,
 ):  # pylint: disable=R0912
     """Add report(s)."""
     # ask the user to select a customer
@@ -411,7 +411,7 @@ def add_report(
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
     projects = timed.projects.get(
-        filters={"customer": customer["id"], "archived": show_archived}, cached=True
+        filters={"customer": customer["id"], "archived": show_archived}, cached=True,
     )
     # select a project
     if project:
@@ -423,7 +423,7 @@ def add_report(
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
     tasks = timed.tasks.get(
-        filters={"project": project["id"], "archived": show_archived}, cached=True
+        filters={"project": project["id"], "archived": show_archived}, cached=True,
     )
     # select a task
     if task:
@@ -473,7 +473,7 @@ def add_absence():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["e", "edit", "update"])
 def edit():
     """Edit different things."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @edit.command("report", aliases=["r"])
@@ -488,7 +488,7 @@ def edit_report(date):
     res = pyfzf.FzfPrompt().prompt(["No", "Yes"], "--prompt 'Are you sure?'")
     if res == ["Yes"]:
         res = timed.reports.patch(
-            report[-1], {"comment": comment, "duration": duration}, {"task": report[-2]}
+            report[-1], {"comment": comment, "duration": duration}, {"task": report[-2]},
         )
         if res.status_code == 200:
             msg("Report updated successfully")
@@ -514,7 +514,7 @@ def edit_absence():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["ac"])
 def activity():
     """Do stuff with activities."""
-    pass  # pylint: disable=W0107
+    # pylint: disable=W0107
 
 
 @activity.command("start", aliases=["add", "a"])
@@ -538,7 +538,7 @@ def start_activity(comment, customer, project, task, show_archived):
         customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
     # get projects
     projects = timed.projects.get(
-        filters={"customer": customer["id"], "archived": show_archived}, cached=True
+        filters={"customer": customer["id"], "archived": show_archived}, cached=True,
     )
     # select a project
     if project:
@@ -550,7 +550,7 @@ def start_activity(comment, customer, project, task, show_archived):
         project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
     # get tasks
     tasks = timed.tasks.get(
-        filters={"project": project["id"], "archived": show_archived}, cached=True
+        filters={"project": project["id"], "archived": show_archived}, cached=True,
     )
     # select a task
     if task:
@@ -562,7 +562,7 @@ def start_activity(comment, customer, project, task, show_archived):
         task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
     # create the activity
     res = timed.activities.start(
-        attributes={"comment": comment}, relationships={"task": task["id"]}
+        attributes={"comment": comment}, relationships={"task": task["id"]},
     )
 
     if res.status_code == 201:
@@ -596,7 +596,7 @@ def show_activity(short):
     if current_activity:
         msg(
             f"Current activity: {format_activity(current_activity)}{comment} (Since "
-            + f"{start})"
+            + f"{start})",
         )
     else:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
@@ -616,7 +616,7 @@ def restart_activity(date):
     comment = activity[1]
     task_id = activity[3]
     res = timed.activities.start(
-        attributes={"comment": comment}, relationships={"task": task_id}
+        attributes={"comment": comment}, relationships={"task": task_id},
     )
     if res.status_code == 201:
         msg(f'Activity "{comment}" restarted successfully.')
@@ -665,10 +665,10 @@ def activity_generate_timesheet():
                     report = report[0]
                     # deserialize the timedelta
                     hours, minutes, seconds = report["attributes"]["duration"].split(
-                        ":"
+                        ":",
                     )
                     old_duration = datetime.timedelta(
-                        hours=int(hours), minutes=int(minutes), seconds=int(seconds)
+                        hours=int(hours), minutes=int(minutes), seconds=int(seconds),
                     )
                     # calculate the new duration
                     report["attributes"]["duration"] = old_duration + duration
