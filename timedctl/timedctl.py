@@ -160,6 +160,24 @@ def select_activity(date):
     return activity
 
 
+def format_activity(activity):
+    """Format an activity for display."""
+    task_obj = activity["relationships"]["task"]
+
+    task = task_obj["attributes"]["name"]
+
+    project_obj = timed.projects.get(
+        id=task_obj["relationships"]["project"]["id"], cached=True
+    )
+    project = project_obj["attributes"]["name"]
+
+    customer_obj = timed.customers.get(
+        id=project_obj["relationships"]["customer"]["data"]["id"], cached=True
+    )
+    customer = customer_obj["attributes"]["name"]
+    return f"{customer} > {project} > {task}"
+
+
 timed = client_setup()
 
 
@@ -307,22 +325,9 @@ def get_activities(date):
     )
     table = [["Activity", "Comment", "Start", "End"]]
     for activity_obj in activities:
-        task_obj = activity_obj["relationships"]["task"]
-        task = task_obj["attributes"]["name"]
-
-        project_obj = timed.projects.get(
-            id=task_obj["relationships"]["project"]["id"], cached=True
-        )
-        project = project_obj["attributes"]["name"]
-
-        customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"], cached=True
-        )
-        customer = customer_obj["attributes"]["name"]
-
         table.append(
             [
-                f"{customer} > {project} > {task}",
+                format_activity(activity_obj),
                 activity_obj["attributes"]["comment"],
                 activity_obj["attributes"]["from-time"].strftime("%H:%M:%S"),
                 activity_obj["attributes"]["to-time"].strftime("%H:%M:%S")
@@ -578,13 +583,20 @@ def stop_activity():
 
 
 @activity.command("show", aliases=["s", "get", "info"])
-def show_activity():
+@click.option("--short", default=False, is_flag=True)
+def show_activity(short):
     """Show current activity."""
-    current_activity = timed.activities.current
+    # TODO: Fix in libtimed so the full object gets returned
+    current_activity = timed.activities.get(
+        filters={"id": timed.activities.current["id"]},
+        include="task,task.project,task.project.customer",
+    )[0]
+    comment = " > " + current_activity["attributes"]["comment"] if not short else ""
+    start = current_activity["attributes"]["from-time"].strftime("%H:%M:%S")
     if current_activity:
         msg(
-            f"Current activity: {current_activity['attributes']['comment']} (Since "
-            + f"{current_activity['attributes']['from-time'].strftime('%H:%M:%S')})"
+            f"Current activity: {format_activity(current_activity)}{comment} (Since "
+            + f"{start})"
         )
     else:
         error_handler("ERR_NO_CURRENT_ACTIVITY")
