@@ -1,12 +1,15 @@
+import json
 import rich
 import re
 import pyfzf
 import click
 import datetime
 import sys
+
 """
 API unrelated helper functions.
 """
+
 
 def msg(message, nonl=False):
     """Print a message in bold green."""
@@ -65,3 +68,23 @@ def time_sum(arr):
         total += val
     # format as HH:MM:SS
     return str(total)
+
+
+def output_formatted(data, format):
+    """Output data in a specified format."""
+    match format:
+        case "json":
+            print(json.dumps(data, indent=4))
+        case "csv":
+            keys = data[0].keys()
+            output = ",".join(keys) + "\n"
+            for obj in data:
+                output += ",".join(obj.values()) + "\n"
+            print(output)
+        case "text":
+            for obj in data:
+                for key, val in obj.items():
+                    print(f"[{key}]: {val}, ", end="")
+                print("")
+        case _:
+            print("Invalid format")

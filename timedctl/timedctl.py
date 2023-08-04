@@ -14,7 +14,14 @@ from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 from tomlkit import dump
 
-from timedctl.helpers import msg, error_handler, fzf_wrapper, time_picker, time_sum
+from timedctl.helpers import (
+    msg,
+    error_handler,
+    fzf_wrapper,
+    time_picker,
+    time_sum,
+    output_formatted,
+)
 
 
 def load_config():
@@ -166,6 +173,82 @@ def timedctl():
 def get():
     """Get different things."""
     pass  # pylint: disable=W0107
+
+
+@get.group(cls=ClickAliasedGroup)
+def data():
+    """Get raw data for building custom scripts."""
+    pass  # pylint: disable=W0107
+
+
+@data.command("customers")
+@click.option("--format", default="json", type=click.Choice(["json", "csv", "text"]))
+def get_customers(format):
+    """Get customers."""
+    customers = timed.customers.get(cached=True)
+    data = []
+    for customer in customers:
+        data.append({"id": customer["id"], "name": customer["attributes"]["name"]})
+    output_formatted(data, format)
+
+
+@data.command("projects")
+@click.option("--format", default="json", type=click.Choice(["json", "csv", "text"]))
+@click.option("--customer-id", default=None, type=int)
+@click.option("--customer-name", default=None, type=str)
+def get_projects(format, customer_id, customer_name):
+    """Get projects."""
+    if not (customer_id or customer_name):
+        error_handler("ERR_MISSING_ARGUMENTS")
+    # Get customer ID if name is specified
+    if not customer_id:
+        customers = timed.customers.get(cached=True)
+        customer = [c for c in customers if c["attributes"]["name"] == customer_name]
+        if len(customer) == 0:
+            error_handler("ERR_CUSTOMER_NOT_FOUND")
+        customer_id = customer[0]["id"]
+    projects = timed.projects.get(cached=True, filters={"customer": customer_id})
+    data = []
+    for project in projects:
+        data.append({"id": project["id"], "name": project["attributes"]["name"]})
+    output_formatted(data, format)
+
+
+@data.command("tasks")
+@click.option("--format", default="json", type=click.Choice(["json", "csv", "text"]))
+@click.option("--customer-id", default=None, type=int)
+@click.option("--customer-name", default=None, type=str)
+@click.option("--project-id", default=None, type=int)
+@click.option("--project-name", default=None, type=str)
+def get_tasks(format, customer_id, customer_name, project_id, project_name):
+    """Get tasks."""
+    if project_name and not (customer_id or customer_name):
+        error_handler("ERR_CUSTOMER_INFO_MISSING")
+    if not (project_id or project_name):
+        error_handler("ERR_MISSING_ARGUMENTS")
+    # Get project ID if name is specified
+    if not project_id:
+        # we need an id for the customer
+        if not customer_id:
+            customers = timed.customers.get(cached=True)
+            customer = [
+                c for c in customers if c["attributes"]["name"] == customer_name
+            ]
+            if len(customer) == 0:
+                error_handler("ERR_CUSTOMER_NOT_FOUND")
+            customer_id = customer[0]["id"]
+        # get the project id
+        projects = timed.projects.get(cached=True, filters={"customer": customer_id})
+        project = [c for c in projects if c["attributes"]["name"] == project_name]
+        if len(project) == 0:
+            error_handler("ERR_PROJECT_NOT_FOUND")
+        project_id = project[0]["id"]
+    # get the tasks for the specified project
+    tasks = timed.tasks.get(cached=True, filters={"project": project_id})
+    data = []
+    for task in tasks:
+        data.append({"id": task["id"], "name": task["attributes"]["name"]})
+    output_formatted(data, format)
 
 
 @get.command("overtime", aliases=["t", "ot", "undertime"])
