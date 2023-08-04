@@ -1,3 +1,6 @@
+"""
+API unrelated helper functions.
+"""
 import datetime
 import json
 import re
@@ -6,10 +9,6 @@ import sys
 import click
 import pyfzf
 import rich
-
-"""
-API unrelated helper functions.
-"""
 
 
 def msg(message, nonl=False):
