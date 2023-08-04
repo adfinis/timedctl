@@ -47,4 +47,4 @@ line-length = 88
 format = "github"
 fixable = ["ALL"]
 # ignore these for now
-ignore = ["PLR0913", "C901", "PLR0912"]
+ignore = ["PLR0913"]

@@ -124,9 +124,9 @@ def select_activity(date):
     activities = timed.activities.get(filters={"date": date})
     activity_view = []
     # loop through all activities
-    for activity in activities:
+    for activity_obj in activities:
         # check if there is an actual task, else use an unknown task
-        task_data = activity["relationships"]["task"]["data"]
+        task_data = activity_obj["relationships"]["task"]["data"]
         if task_data:
             task = timed.tasks.get(id=task_data["id"], cached=True)
         else:
@@ -134,12 +134,12 @@ def select_activity(date):
         activity_view.append(
             [
                 task["attributes"]["name"],
-                activity["attributes"]["comment"],
-                activity["attributes"]["from-time"].strftime("%H:%M:%S")
+                activity_obj["attributes"]["comment"],
+                activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
                 + " - "
-                + activity["attributes"]["to-time"].strftime("%H:%M:%S"),
+                + activity_obj["attributes"]["to-time"].strftime("%H:%M:%S"),
                 task["id"],
-                activity["id"],
+                activity_obj["id"],
             ],
         )
     # get longest key per value
@@ -159,13 +159,13 @@ def select_activity(date):
             [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
         )
 
-    activity = fzf_wrapper(fzf_obj, [0], "Select an activity: ")
-    return activity
+    activity_obj = fzf_wrapper(fzf_obj, [0], "Select an activity: ")
+    return activity_obj
 
 
-def format_activity(activity):
+def format_activity(activity_obj):
     """Format an activity for display."""
-    task_obj = activity["relationships"]["task"]
+    task_obj = activity_obj["relationships"]["task"]
 
     task = task_obj["attributes"]["name"]
 
@@ -181,6 +181,81 @@ def format_activity(activity):
     )
     customer = customer_obj["attributes"]["name"]
     return f"{customer} > {project} > {task}"
+
+
+def get_customer_by_name(customers, name, archived):
+    """Get customer by name."""
+    customers = timed.customers.get(cached=True, filters={"archived": archived})
+    customer = [c for c in customers if c["attributes"]["name"] == name]
+    if len(customer) == 0:
+        error_handler("ERR_CUSTOMER_NOT_FOUND")
+    customer_id = customer[0]["id"]
+    return customer_id
+
+
+def get_project_by_name(projects, name, customer_id, archived):
+    """Get project by name."""
+    projects = timed.projects.get(
+        cached=True,
+        filters={"customer": customer_id, "archived": archived},
+    )
+    project = [c for c in projects if c["attributes"]["name"] == name]
+    if len(project) == 0:
+        error_handler("ERR_PROJECT_NOT_FOUND")
+    project_id = project[0]["id"]
+    return project_id
+
+
+def get_task_by_name(tasks, name, project_id, archived):
+    """Get task by name."""
+    tasks = timed.tasks.get(
+        cached=True,
+        filters={"project": project_id, "archived": archived},
+    )
+    task = [c for c in tasks if c["attributes"]["name"] == name]
+    if len(task) == 0:
+        error_handler("ERR_TASK_NOT_FOUND")
+    task_id = task[0]["id"]
+    return task_id
+
+
+def select_task(customer, project, task, show_archived):
+    """Select a task ID with fzf."""
+    # select a customer
+    customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
+    if customer:
+        customer_id = get_customer_by_name(customers, customer, show_archived)
+    else:
+        customer_id = fzf_wrapper(
+            customers,
+            ["attributes", "name"],
+            "Select a customer: ",
+        )["id"]
+    # get projects
+    projects = timed.projects.get(
+        filters={"customer": customer_id, "archived": show_archived},
+        cached=True,
+    )
+    # select a project
+    if project:
+        project_id = get_project_by_name(projects, project, customer_id, show_archived)
+    else:
+        project_id = fzf_wrapper(
+            projects,
+            ["attributes", "name"],
+            "Select a project: ",
+        )["id"]
+    # get tasks
+    tasks = timed.tasks.get(
+        filters={"project": project_id, "archived": show_archived},
+        cached=True,
+    )
+    # select a task
+    if task:
+        task_id = get_task_by_name(tasks, task, project_id, show_archived)
+    else:
+        task_id = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")["id"]
+    return task_id
 
 
 timed = client_setup()
@@ -214,10 +289,10 @@ def data():
 def get_customers(output_format):
     """Get customers."""
     customers = timed.customers.get(cached=True)
-    data = []
+    output = []
     for customer in customers:
-        data.append({"id": customer["id"], "name": customer["attributes"]["name"]})
-    output_formatted(data, output_format)
+        output.append({"id": customer["id"], "name": customer["attributes"]["name"]})
+    output_formatted(output, output_format)
 
 
 @data.command("projects")
@@ -229,22 +304,20 @@ def get_customers(output_format):
 )
 @click.option("--customer-id", default=None, type=int)
 @click.option("--customer-name", default=None, type=str)
-def get_projects(output_format, customer_id, customer_name):
+@click.option("--archived", default=False, is_flag=True)
+def get_projects(output_format, customer_id, customer_name, archived):
     """Get projects."""
     if not (customer_id or customer_name):
         error_handler("ERR_MISSING_ARGUMENTS")
     # Get customer ID if name is specified
     if not customer_id:
         customers = timed.customers.get(cached=True)
-        customer = [c for c in customers if c["attributes"]["name"] == customer_name]
-        if len(customer) == 0:
-            error_handler("ERR_CUSTOMER_NOT_FOUND")
-        customer_id = customer[0]["id"]
+        customer_id = get_customer_by_name(customers, customer_name, archived)
     projects = timed.projects.get(cached=True, filters={"customer": customer_id})
-    data = []
+    output = []
     for project in projects:
-        data.append({"id": project["id"], "name": project["attributes"]["name"]})
-    output_formatted(data, output_format)
+        output.append({"id": project["id"], "name": project["attributes"]["name"]})
+    output_formatted(output, output_format)
 
 
 @data.command("tasks")
@@ -255,11 +328,18 @@ def get_projects(output_format, customer_id, customer_name):
     type=click.Choice(["json", "csv", "text"]),
 )
 @click.option("--customer-id", default=None, type=int)
-@click.option("--customer-id", default=None, type=int)
 @click.option("--customer-name", default=None, type=str)
 @click.option("--project-id", default=None, type=int)
 @click.option("--project-name", default=None, type=str)
-def get_tasks(output_format, customer_id, customer_name, project_id, project_name):
+@click.option("--archived", default=False, is_flag=True)
+def get_tasks(
+    output_format,
+    customer_id,
+    customer_name,
+    project_id,
+    project_name,
+    archived,
+):
     """Get tasks."""
     if project_name and not (customer_id or customer_name):
         error_handler("ERR_CUSTOMER_INFO_MISSING")
@@ -270,24 +350,16 @@ def get_tasks(output_format, customer_id, customer_name, project_id, project_nam
         # we need an id for the customer
         if not customer_id:
             customers = timed.customers.get(cached=True)
-            customer = [
-                c for c in customers if c["attributes"]["name"] == customer_name
-            ]
-            if len(customer) == 0:
-                error_handler("ERR_CUSTOMER_NOT_FOUND")
-            customer_id = customer[0]["id"]
+            customer_id = get_customer_by_name(customers, customer_name, archived)
         # get the project id
         projects = timed.projects.get(cached=True, filters={"customer": customer_id})
-        project = [c for c in projects if c["attributes"]["name"] == project_name]
-        if len(project) == 0:
-            error_handler("ERR_PROJECT_NOT_FOUND")
-        project_id = project[0]["id"]
+        project_id = get_project_by_name(projects, project_name, customer_id, archived)
     # get the tasks for the specified project
     tasks = timed.tasks.get(cached=True, filters={"project": project_id})
-    data = []
+    output = []
     for task in tasks:
-        data.append({"id": task["id"], "name": task["attributes"]["name"]})
-    output_formatted(data, output_format)
+        output.append({"id": task["id"], "name": task["attributes"]["name"]})
+    output_formatted(output, output_format)
 
 
 @get.command("overtime", aliases=["t", "ot", "undertime"])
@@ -310,29 +382,17 @@ def get_reports(date):
     table = [["Customer", "Project", "Task", "Comment", "Duration"]]
     for report in reports:
         task_obj = report["relationships"]["task"]
-        task = task_obj["attributes"]["name"]
-
-        project_obj = timed.projects.get(
-            id=task_obj["relationships"]["project"]["id"],
-            cached=True,
+        project_obj = task_obj["relationships"]["project"]
+        customer_obj = project_obj["relationships"]["customer"]
+        # get name attributes
+        task, project, customer = (
+            x["attributes"]["name"] for x in [task_obj, project_obj, customer_obj]
         )
-        project = project_obj["attributes"]["name"]
+        comment = report["attributes"]["comment"]
+        duration = report["attributes"]["duration"]
 
-        customer_obj = timed.customers.get(
-            id=project_obj["relationships"]["customer"]["data"]["id"],
-            cached=True,
-        )
-        customer = customer_obj["attributes"]["name"]
-
-        table.append(
-            [
-                customer,
-                project,
-                task,
-                report["attributes"]["comment"],
-                report["attributes"]["duration"],
-            ],
-        )
+        table.append([customer, project, task, comment, duration])
+    # create the output
     output = terminaltables.SingleTable(table)
     msg(f"Reports for {date if date is not None else 'today'}:")
     click.echo(output.table)
@@ -426,45 +486,10 @@ def add_report(
     description,
     duration,
     show_archived,
-):  # pylint: disable=R0912
+):  # ruff: noqa: PLR0913
     """Add report(s)."""
-    # ask the user to select a customer
-    msg("Select a customer")
-    # select a customer
-    customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
-    if customer:
-        customer = [c for c in customers if c["attributes"]["name"] == customer]
-        if len(customer) == 0:
-            error_handler("ERR_CUSTOMER_NOT_FOUND")
-        customer = customer[0]
-    else:
-        customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
-    # get projects
-    projects = timed.projects.get(
-        filters={"customer": customer["id"], "archived": show_archived},
-        cached=True,
-    )
-    # select a project
-    if project:
-        project = [p for p in projects if p["attributes"]["name"] == project]
-        if len(project) == 0:
-            error_handler("ERR_PROJECT_NOT_FOUND")
-        project = project[0]
-    else:
-        project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
-    # get tasks
-    tasks = timed.tasks.get(
-        filters={"project": project["id"], "archived": show_archived},
-        cached=True,
-    )
     # select a task
-    if task:
-        task = [t for t in tasks if t["attributes"]["name"] == task]
-        if len(task) == 0:
-            error_handler("ERR_TASK_NOT_FOUND")
-        task = task[0]
-    else:
-        task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
+    task_id = select_task(customer, project, task, show_archived)
     # ask the user to enter a description
     if not description:
         msg("Enter a description")
@@ -480,7 +505,7 @@ def add_report(
     res = timed.reports.post(
         {"duration": duration, "comment": description},
         {
-            "task": task["id"],
+            "task": task_id,
         },
     )
     if res.status_code == requests.codes["created"]:
@@ -559,47 +584,11 @@ def activity():
 @click.option("--show-archived", default=False, is_flag=True)
 def start_activity(comment, customer, project, task, show_archived):
     """Start recording activity."""
-    customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
-    # ask the user to select a customer
-    msg("Select a customer")
-    # select a customer
-    if customer:
-        customer = [c for c in customers if c["attributes"]["name"] == customer]
-        if len(customer) == 0:
-            error_handler("ERR_CUSTOMER_NOT_FOUND")
-        customer = customer[0]
-    else:
-        customer = fzf_wrapper(customers, ["attributes", "name"], "Select a customer: ")
-    # get projects
-    projects = timed.projects.get(
-        filters={"customer": customer["id"], "archived": show_archived},
-        cached=True,
-    )
-    # select a project
-    if project:
-        project = [p for p in projects if p["attributes"]["name"] == project]
-        if len(project) == 0:
-            error_handler("ERR_PROJECT_NOT_FOUND")
-        project = project[0]
-    else:
-        project = fzf_wrapper(projects, ["attributes", "name"], "Select a project: ")
-    # get tasks
-    tasks = timed.tasks.get(
-        filters={"project": project["id"], "archived": show_archived},
-        cached=True,
-    )
-    # select a task
-    if task:
-        task = [t for t in tasks if t["attributes"]["name"] == task]
-        if len(task) == 0:
-            error_handler("ERR_TASK_NOT_FOUND")
-        task = task[0]
-    else:
-        task = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")
+    task_id = select_task(customer, project, task, show_archived)
     # create the activity
     res = timed.activities.start(
         attributes={"comment": comment},
-        relationships={"task": task["id"]},
+        relationships={"task": task_id},
     )
 
     if res.status_code == requests.codes["created"]:
@@ -623,15 +612,16 @@ def stop_activity():
 @click.option("--short", default=False, is_flag=True)
 def show_activity(short):
     """Show current activity."""
-    current_activity = timed.activities.get(
-        filters={"id": timed.activities.current["id"]},
-        include="task,task.project,task.project.customer",
-    )[0]
-    comment = " > " + current_activity["attributes"]["comment"] if not short else ""
-    start = current_activity["attributes"]["from-time"].strftime("%H:%M:%S")
+    current_activity = timed.activities.current
     if current_activity:
+        activity_obj = timed.activities.get(
+            filters={"id": current_activity["id"]},
+            include="task,task.project,task.project.customer",
+        )[0]
+        comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
+        start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
         msg(
-            f"Current activity: {format_activity(current_activity)}{comment} (Since "
+            f"Current activity_obj: {format_activity(activity)}{comment} (Since "
             + f"{start})",
         )
     else:
@@ -647,10 +637,10 @@ def restart_activity(date):
         timed.activities.stop()
         msg("Stopped current activity.")
     # select an activity
-    activity = select_activity(date)
+    activity_obj = select_activity(date)
     # grab attributes
-    comment = activity[1]
-    task_id = activity[3]
+    comment = activity_obj[1]
+    task_id = activity_obj[3]
     res = timed.activities.start(
         attributes={"comment": comment},
         relationships={"task": task_id},
@@ -667,9 +657,9 @@ def restart_activity(date):
 def delete_activity(date):
     """Delete an activity."""
     # select an activity
-    activity = select_activity(date)
-    if timed.activities.delete(activity[-1]):
-        msg(f"Activity {activity[1]} deleted successfully.")
+    activity_obj = select_activity(date)
+    if timed.activities.delete(activity_obj[-1]):
+        msg(f"Activity {activity_obj[1]} deleted successfully.")
         return
     error_handler("ERR_ACTIVITY_DELETE_FAILED")
 
@@ -719,7 +709,7 @@ def activity_generate_timesheet():
                     )
                 else:
                     # create report
-                    r = timed.reports.post(
+                    res = timed.reports.post(
                         {
                             "duration": duration,
                             "comment": attr["comment"],
@@ -727,7 +717,7 @@ def activity_generate_timesheet():
                         {"task": task},
                     )
                     # append the report to the known reports
-                    reports.append(r.json()["data"])
+                    reports.append(res.json()["data"])
                 # update activity to be transferred
                 attr["transferred"] = True
                 timed.activities.patch(activity_obj["id"], attr, {"task": task})
