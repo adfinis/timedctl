@@ -71,21 +71,21 @@ def time_sum(arr):
     return str(total)
 
 
-def output_formatted(data, format):
+def output_formatted(data, output_format):
     """Output data in a specified format."""
-    match format:
+    match output_format:
         case "json":
-            print(json.dumps(data, indent=4))
+            rich.print(json.dumps(data, indent=4))
         case "csv":
             keys = data[0].keys()
             output = ",".join(keys) + "\n"
             for obj in data:
                 output += ",".join(obj.values()) + "\n"
-            print(output)
+            rich.print(output)
         case "text":
             for obj in data:
                 for key, val in obj.items():
-                    print(f"[{key}]: {val}, ", end="")
-                print("")
+                    rich.print(f"[{key}]: {val}, ", end="")
+                rich.print("")
         case _:
-            print("Invalid format")
+            rich.print("Invalid format")
