@@ -16,10 +16,11 @@ $ pip install timedctl
 
 ## Local development
 Clone the repository and install the dependencies with `poetry install`. You can now run the project with `poetry run timedctl`. For building wheels, you can use `poetry build`.
+Run tests with `poetry run pytest --cov --cov-fail-under 100`.
 
 ## Known issues
 * Make sure to have a polkit-agent running, otherwise the poetry installation during the installation on arch might fail.
-* You need a keyring installed in order for timedctl to store the SSO token, for example `gnome-keyring`. 
+* You need a keyring installed in order for timedctl to store the SSO token, for example `gnome-keyring`.
 
 ## Feature roadmap
 - [x] SSO auth

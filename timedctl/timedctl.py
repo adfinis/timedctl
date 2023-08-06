@@ -368,7 +368,7 @@ def get_overtime(date):
     """Get overtime of user."""
     user = timed.users.me["id"]
     overtime = timed.overtime.get({"user": user, "date": date})
-    msg(f"Currrent overtime is: {overtime}")
+    msg(f"Current overtime is: {overtime}")
 
 
 @get.command("reports", aliases=["report", "r"])
@@ -427,6 +427,7 @@ def get_activities(date):
 @get.command("absences", aliases=["abs"])
 def get_absences():
     """Get absences."""
+    error_handler("ERR_NOT_IMPLEMENTED")
 
 
 @timedctl.group(cls=ClickAliasedGroup, aliases=["rm", "d", "remove", "del"])
@@ -621,7 +622,7 @@ def show_activity(short):
         comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
         start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
         msg(
-            f"Current activity_obj: {format_activity(activity)}{comment} (Since "
+            f"Current activity: {format_activity(activity)}{comment} (Since "
             + f"{start})",
         )
     else:
