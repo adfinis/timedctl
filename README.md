@@ -14,6 +14,24 @@ People on other distributions can use pip to install the package from pypi:
 $ pip install timedctl
 ```
 
+### Shell completion
+`timedctl` support shell completion for the unaliased commands:
+
+**bash**
+```bash
+_TIMEDCTL_COMPLETE=bash_source timedctl >> ~/.bashrc`
+```
+
+**zsh**
+```bash
+_TIMEDCTL_COMPLETE=zsh_source timedctl >> ~/.zshrc`
+```
+
+**fish**
+```bash
+_TIMEDCTL_COMPLETE=fish_source timedctl >  ~/.config/fish/completions/timedctl.fish`
+```
+
 ## Local development
 Clone the repository and install the dependencies with `poetry install`. You can now run the project with `poetry run timedctl`. For building wheels, you can use `poetry build`.
 Run tests with `poetry run pytest --cov --cov-fail-under 100`.
