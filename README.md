@@ -19,17 +19,17 @@ $ pip install timedctl
 
 **bash**
 ```bash
-_TIMEDCTL_COMPLETE=bash_source timedctl >> ~/.bashrc`
+_TIMEDCTL_COMPLETE=bash_source timedctl >> ~/.bashrc
 ```
 
 **zsh**
 ```bash
-_TIMEDCTL_COMPLETE=zsh_source timedctl >> ~/.zshrc`
+_TIMEDCTL_COMPLETE=zsh_source timedctl >> ~/.zshrc
 ```
 
 **fish**
 ```bash
-_TIMEDCTL_COMPLETE=fish_source timedctl >  ~/.config/fish/completions/timedctl.fish`
+_TIMEDCTL_COMPLETE=fish_source timedctl >  ~/.config/fish/completions/timedctl.fish
 ```
 
 ## Local development
