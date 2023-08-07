@@ -613,12 +613,12 @@ def stop_activity():
 @click.option("--short", default=False, is_flag=True)
 def show_activity(short):
     """Show current activity."""
-    current_activity = timed.activities.current
+    current_activity = timed.activities.get(
+        filters={"active": True},
+        include="task,task.project,task.project.customer",
+    )
     if current_activity:
-        activity_obj = timed.activities.get(
-            filters={"id": current_activity["id"]},
-            include="task,task.project,task.project.customer",
-        )[0]
+        activity_obj = current_activity[0]
         comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
         start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
         msg(
