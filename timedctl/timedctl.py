@@ -622,7 +622,7 @@ def show_activity(short):
         comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
         start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
         msg(
-            f"Current activity: {format_activity(activity)}{comment} (Since "
+            f"Current activity: {format_activity(activity_obj)}{comment} (Since "
             + f"{start})",
         )
     else:
