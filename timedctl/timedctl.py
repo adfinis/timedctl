@@ -10,7 +10,6 @@ import pyfzf
 import requests
 import terminaltables
 import tomllib
-from click_aliases import ClickAliasedGroup
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 from tomlkit import dump
@@ -25,708 +24,568 @@ from timedctl.helpers import (
 )
 
 
-def load_config():
-    """Load the timedctl config."""
-    cfg = {
-        "username": "test",
-        "timed_url": "https://timed.example.com",
-        "sso_url": "https://sso.example.com",
-        "sso_realm": "example",
-        "sso_client_id": "timedctl",
-    }
+class Timedctl:
+    def __init__(self):
+        """Load the timedctl config."""
+        cfg = {
+            "username": "test",
+            "timed_url": "https://timed.example.com",
+            "sso_url": "https://sso.example.com",
+            "sso_realm": "example",
+            "sso_client_id": "timedctl",
+        }
 
-    # Get the path to the config file based on the $XDG_config_HOME environment variable
-    if not os.getenv("HOME"):
-        raise OSError("$HOME is not set")
+        # Get the path to the config file based on the
+        # $XDG_config_HOME environment variable
+        if not os.getenv("HOME"):
+            raise OSError("$HOME is not set")
 
-    xdg_config_home = os.getenv(
-        "XDG_CONFIG_HOME",
-        os.path.join(os.getenv("HOME"), ".config"),
-    )
-    config_dir = os.path.join(xdg_config_home, "timedctl")
-    config_file = os.path.join(config_dir, "config.toml")
-
-    if not os.path.isfile(config_file):
-        os.makedirs(config_dir, exist_ok=True)
-        click.echo("No config file found. Please enter the following infos.")
-        for key in cfg:
-            cfg[key] = input(f"{key} ({cfg[key]}): ")
-        with open(config_file, "w", encoding="utf-8") as file:
-            dump(cfg, file)
-    else:
-        with open(config_file, "rb") as file:
-            user_config = tomllib.load(file)
-        for key in user_config:
-            cfg[key] = user_config[key]
-    return cfg
-
-
-config = load_config()
-
-
-def client_setup():
-    """Set up the timed client."""
-    # initialize libtimed
-    url = config.get("timed_url")
-    api_namespace = "api/v1"
-
-    # Auth stuff
-    client_id = config.get("sso_client_id")
-    sso_url = config.get("sso_url")
-    sso_realm = config.get("sso_realm")
-    auth_path = "timedctl/auth"
-    oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
-    token = oidc_client.authorize()
-    return TimedAPIClient(token, url, api_namespace)
-
-
-def select_report(date):
-    """FZF prompt to select a report."""
-    reports = timed.reports.get(
-        filters={"date": date},
-        include="task,task.project,task.project.customer",
-    )
-    report_view = []
-    for report in reports:
-        task = report["relationships"]["task"]
-        report_view.append(
-            [
-                task["attributes"]["name"],
-                report["attributes"]["comment"],
-                str(report["attributes"]["duration"]),
-                task["id"],
-                report["id"],
-            ],
+        xdg_config_home = os.getenv(
+            "XDG_CONFIG_HOME",
+            os.path.join(os.getenv("HOME"), ".config"),
         )
-    # get longest key per value
-    max_key_lengths = [max(map(len, col)) for col in zip(*report_view, strict=False)]
-    # pad all the values
-    report_view = [
-        [
-            report_view[i][j].ljust(max_key_lengths[j])
-            for j in range(len(report_view[i]))
-        ]
-        for i in range(len(report_view))
-    ]
-    # create a list for fzf
-    fzf_obj = []
-    for row in report_view:
-        fzf_obj.append(
-            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
-        )
+        config_dir = os.path.join(xdg_config_home, "timedctl")
+        config_file = os.path.join(config_dir, "config.toml")
 
-    report = fzf_wrapper(fzf_obj, [0], "Select a report: ")
-    return report
-
-
-def select_activity(date):
-    """FZF prompt to select an activity."""
-    activities = timed.activities.get(filters={"date": date})
-    activity_view = []
-    # loop through all activities
-    for activity_obj in activities:
-        # check if there is an actual task, else use an unknown task
-        task_data = activity_obj["relationships"]["task"]["data"]
-        if task_data:
-            task = timed.tasks.get(id=task_data["id"], cached=True)
+        if not os.path.isfile(config_file):
+            os.makedirs(config_dir, exist_ok=True)
+            click.echo("No config file found. Please enter the following infos.")
+            for key in cfg:
+                cfg[key] = input(f"{key} ({cfg[key]}): ")
+            with open(config_file, "w", encoding="utf-8") as file:
+                dump(cfg, file)
         else:
-            task = {"attributes": {"name": "Unknown task"}, "id": None}
-        activity_view.append(
-            [
-                task["attributes"]["name"],
-                activity_obj["attributes"]["comment"],
-                activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
-                + " - "
-                + activity_obj["attributes"]["to-time"].strftime("%H:%M:%S"),
-                task["id"],
-                activity_obj["id"],
-            ],
+            with open(config_file, "rb") as file:
+                user_config = tomllib.load(file)
+            for key in user_config:
+                cfg[key] = user_config[key]
+        self.config = cfg
+
+        """Set up the timed client."""
+        # initialize libtimed
+        url = self.config.get("timed_url")
+        api_namespace = "api/v1"
+
+        # Auth stuff
+        client_id = self.config.get("sso_client_id")
+        sso_url = self.config.get("sso_url")
+        sso_realm = self.config.get("sso_realm")
+        auth_path = "timedctl/auth"
+        oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
+        token = oidc_client.authorize()
+        self.timed = TimedAPIClient(token, url, api_namespace)
+
+    def select_report(self, date):
+        """FZF prompt to select a report."""
+        reports = self.timed.reports.get(
+            filters={"date": date},
+            include="task,task.project,task.project.customer",
         )
-    # get longest key per value
-    max_key_lengths = [max(map(len, col)) for col in zip(*activity_view, strict=False)]
-    # pad all the values
-    activity_view = [
-        [
-            activity_view[i][j].ljust(max_key_lengths[j])
-            for j in range(len(activity_view[i]))
+        report_view = []
+        for report in reports:
+            task = report["relationships"]["task"]
+            report_view.append(
+                [
+                    task["attributes"]["name"],
+                    report["attributes"]["comment"],
+                    str(report["attributes"]["duration"]),
+                    task["id"],
+                    report["id"],
+                ],
+            )
+        # get longest key per value
+        max_key_lengths = [
+            max(map(len, col)) for col in zip(*report_view, strict=False)
         ]
-        for i in range(len(activity_view))
-    ]
-    # create a list for fzf
-    fzf_obj = []
-    for row in activity_view:
-        fzf_obj.append(
-            [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
+        # pad all the values
+        report_view = [
+            [
+                report_view[i][j].ljust(max_key_lengths[j])
+                for j in range(len(report_view[i]))
+            ]
+            for i in range(len(report_view))
+        ]
+        # create a list for fzf
+        fzf_obj = []
+        for row in report_view:
+            fzf_obj.append(
+                [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
+            )
+
+        report = fzf_wrapper(fzf_obj, [0], "Select a report: ")
+        return report
+
+    def select_activity(self, date):
+        """FZF prompt to select an activity."""
+        activities = self.timed.activities.get(filters={"date": date})
+        activity_view = []
+        # loop through all activities
+        for activity_obj in activities:
+            # check if there is an actual task, else use an unknown task
+            task_data = activity_obj["relationships"]["task"]["data"]
+            if task_data:
+                task = self.timed.tasks.get(id=task_data["id"], cached=True)
+            else:
+                task = {"attributes": {"name": "Unknown task"}, "id": None}
+            activity_view.append(
+                [
+                    task["attributes"]["name"],
+                    activity_obj["attributes"]["comment"],
+                    activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
+                    + " - "
+                    + activity_obj["attributes"]["to-time"].strftime("%H:%M:%S"),
+                    task["id"],
+                    activity_obj["id"],
+                ],
+            )
+        # get longest key per value
+        max_key_lengths = [
+            max(map(len, col)) for col in zip(*activity_view, strict=False)
+        ]
+        # pad all the values
+        activity_view = [
+            [
+                activity_view[i][j].ljust(max_key_lengths[j])
+                for j in range(len(activity_view[i]))
+            ]
+            for i in range(len(activity_view))
+        ]
+        # create a list for fzf
+        fzf_obj = []
+        for row in activity_view:
+            fzf_obj.append(
+                [" | ".join([row[0], row[1], row[2]]), row[1], row[2], row[3], row[4]],
+            )
+
+        activity_obj = fzf_wrapper(fzf_obj, [0], "Select an activity: ")
+        return activity_obj
+
+    def format_activity(self, activity_obj):
+        """Format an activity for display."""
+        task_obj = activity_obj["relationships"]["task"]
+
+        task = task_obj["attributes"]["name"]
+
+        project_obj = self.timed.projects.get(
+            id=task_obj["relationships"]["project"]["id"],
+            cached=True,
         )
+        project = project_obj["attributes"]["name"]
 
-    activity_obj = fzf_wrapper(fzf_obj, [0], "Select an activity: ")
-    return activity_obj
+        customer_obj = self.timed.customers.get(
+            id=project_obj["relationships"]["customer"]["data"]["id"],
+            cached=True,
+        )
+        customer = customer_obj["attributes"]["name"]
+        return f"{customer} > {project} > {task}"
 
+    def get_customer_by_name(self, customers, name, archived):
+        """Get customer by name."""
+        customers = self.timed.customers.get(
+            cached=True, filters={"archived": archived},
+        )
+        customer = [c for c in customers if c["attributes"]["name"] == name]
+        if len(customer) == 0:
+            error_handler("ERR_CUSTOMER_NOT_FOUND")
+        customer_id = customer[0]["id"]
+        return customer_id
 
-def format_activity(activity_obj):
-    """Format an activity for display."""
-    task_obj = activity_obj["relationships"]["task"]
+    def get_project_by_name(self, projects, name, customer_id, archived):
+        """Get project by name."""
+        projects = self.timed.projects.get(
+            cached=True,
+            filters={"customer": customer_id, "archived": archived},
+        )
+        project = [c for c in projects if c["attributes"]["name"] == name]
+        if len(project) == 0:
+            error_handler("ERR_PROJECT_NOT_FOUND")
+        project_id = project[0]["id"]
+        return project_id
 
-    task = task_obj["attributes"]["name"]
+    def get_task_by_name(self, tasks, name, project_id, archived):
+        """Get task by name."""
+        tasks = self.timed.tasks.get(
+            cached=True,
+            filters={"project": project_id, "archived": archived},
+        )
+        task = [c for c in tasks if c["attributes"]["name"] == name]
+        if len(task) == 0:
+            error_handler("ERR_TASK_NOT_FOUND")
+        task_id = task[0]["id"]
+        return task_id
 
-    project_obj = timed.projects.get(
-        id=task_obj["relationships"]["project"]["id"],
-        cached=True,
-    )
-    project = project_obj["attributes"]["name"]
+    def select_task(self, customer, project, task, show_archived):
+        """Select a task ID with fzf."""
+        # select a customer
+        customers = self.timed.customers.get(
+            filters={"archived": show_archived},
+            cached=True,
+        )
+        if customer:
+            customer_id = self.get_customer_by_name(customers, customer, show_archived)
+        else:
+            customer_id = fzf_wrapper(
+                customers,
+                ["attributes", "name"],
+                "Select a customer: ",
+            )["id"]
+        # get projects
+        projects = self.timed.projects.get(
+            filters={"customer": customer_id, "archived": show_archived},
+            cached=True,
+        )
+        # select a project
+        if project:
+            project_id = self.get_project_by_name(
+                projects,
+                project,
+                customer_id,
+                show_archived,
+            )
+        else:
+            project_id = fzf_wrapper(
+                projects,
+                ["attributes", "name"],
+                "Select a project: ",
+            )["id"]
+        # get tasks
+        tasks = self.timed.tasks.get(
+            filters={"project": project_id, "archived": show_archived},
+            cached=True,
+        )
+        # select a task
+        if task:
+            task_id = self.get_task_by_name(tasks, task, project_id, show_archived)
+        else:
+            task_id = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")[
+                "id"
+            ]
+        return task_id
 
-    customer_obj = timed.customers.get(
-        id=project_obj["relationships"]["customer"]["data"]["id"],
-        cached=True,
-    )
-    customer = customer_obj["attributes"]["name"]
-    return f"{customer} > {project} > {task}"
+    def get_customers(self, output_format):
+        """Get customers."""
+        customers = self.timed.customers.get(cached=True)
+        output = []
+        for customer in customers:
+            output.append(
+                {"id": customer["id"], "name": customer["attributes"]["name"]},
+            )
+        output_formatted(output, output_format)
 
-
-def get_customer_by_name(customers, name, archived):
-    """Get customer by name."""
-    customers = timed.customers.get(cached=True, filters={"archived": archived})
-    customer = [c for c in customers if c["attributes"]["name"] == name]
-    if len(customer) == 0:
-        error_handler("ERR_CUSTOMER_NOT_FOUND")
-    customer_id = customer[0]["id"]
-    return customer_id
-
-
-def get_project_by_name(projects, name, customer_id, archived):
-    """Get project by name."""
-    projects = timed.projects.get(
-        cached=True,
-        filters={"customer": customer_id, "archived": archived},
-    )
-    project = [c for c in projects if c["attributes"]["name"] == name]
-    if len(project) == 0:
-        error_handler("ERR_PROJECT_NOT_FOUND")
-    project_id = project[0]["id"]
-    return project_id
-
-
-def get_task_by_name(tasks, name, project_id, archived):
-    """Get task by name."""
-    tasks = timed.tasks.get(
-        cached=True,
-        filters={"project": project_id, "archived": archived},
-    )
-    task = [c for c in tasks if c["attributes"]["name"] == name]
-    if len(task) == 0:
-        error_handler("ERR_TASK_NOT_FOUND")
-    task_id = task[0]["id"]
-    return task_id
-
-
-def select_task(customer, project, task, show_archived):
-    """Select a task ID with fzf."""
-    # select a customer
-    customers = timed.customers.get(filters={"archived": show_archived}, cached=True)
-    if customer:
-        customer_id = get_customer_by_name(customers, customer, show_archived)
-    else:
-        customer_id = fzf_wrapper(
-            customers,
-            ["attributes", "name"],
-            "Select a customer: ",
-        )["id"]
-    # get projects
-    projects = timed.projects.get(
-        filters={"customer": customer_id, "archived": show_archived},
-        cached=True,
-    )
-    # select a project
-    if project:
-        project_id = get_project_by_name(projects, project, customer_id, show_archived)
-    else:
-        project_id = fzf_wrapper(
-            projects,
-            ["attributes", "name"],
-            "Select a project: ",
-        )["id"]
-    # get tasks
-    tasks = timed.tasks.get(
-        filters={"project": project_id, "archived": show_archived},
-        cached=True,
-    )
-    # select a task
-    if task:
-        task_id = get_task_by_name(tasks, task, project_id, show_archived)
-    else:
-        task_id = fzf_wrapper(tasks, ["attributes", "name"], "Select a task: ")["id"]
-    return task_id
-
-
-timed = client_setup()
-
-
-@click.group(cls=ClickAliasedGroup)
-def timedctl():
-    """Use timedctl."""
-    # pylint: disable=W0107
-
-
-@timedctl.group(cls=ClickAliasedGroup, aliases=["g", "show", "describe"])
-def get():
-    """Get different things."""
-    # pylint: disable=W0107
-
-
-@get.group(cls=ClickAliasedGroup)
-def data():
-    """Get raw data for building custom scripts."""
-    # pylint: disable=W0107
-
-
-@data.command("customers")
-@click.option(
-    "--format",
-    "output_format",
-    default="json",
-    type=click.Choice(["json", "csv", "text"]),
-)
-def get_customers(output_format):
-    """Get customers."""
-    customers = timed.customers.get(cached=True)
-    output = []
-    for customer in customers:
-        output.append({"id": customer["id"], "name": customer["attributes"]["name"]})
-    output_formatted(output, output_format)
-
-
-@data.command("projects")
-@click.option(
-    "--format",
-    "output_format",
-    default="json",
-    type=click.Choice(["json", "csv", "text"]),
-)
-@click.option("--customer-id", default=None, type=int)
-@click.option("--customer-name", default=None, type=str)
-@click.option("--archived", default=False, is_flag=True)
-def get_projects(output_format, customer_id, customer_name, archived):
-    """Get projects."""
-    if not (customer_id or customer_name):
-        error_handler("ERR_MISSING_ARGUMENTS")
-    # Get customer ID if name is specified
-    if not customer_id:
-        customers = timed.customers.get(cached=True)
-        customer_id = get_customer_by_name(customers, customer_name, archived)
-    projects = timed.projects.get(cached=True, filters={"customer": customer_id})
-    output = []
-    for project in projects:
-        output.append({"id": project["id"], "name": project["attributes"]["name"]})
-    output_formatted(output, output_format)
-
-
-@data.command("tasks")
-@click.option(
-    "--format",
-    "output_format",
-    default="json",
-    type=click.Choice(["json", "csv", "text"]),
-)
-@click.option("--customer-id", default=None, type=int)
-@click.option("--customer-name", default=None, type=str)
-@click.option("--project-id", default=None, type=int)
-@click.option("--project-name", default=None, type=str)
-@click.option("--archived", default=False, is_flag=True)
-def get_tasks(
-    output_format,
-    customer_id,
-    customer_name,
-    project_id,
-    project_name,
-    archived,
-):
-    """Get tasks."""
-    if project_name and not (customer_id or customer_name):
-        error_handler("ERR_CUSTOMER_INFO_MISSING")
-    if not (project_id or project_name):
-        error_handler("ERR_MISSING_ARGUMENTS")
-    # Get project ID if name is specified
-    if not project_id:
-        # we need an id for the customer
+    def get_projects(self, output_format, customer_id, customer_name, archived):
+        """Get projects."""
+        if not (customer_id or customer_name):
+            error_handler("ERR_MISSING_ARGUMENTS")
+        # Get customer ID if name is specified
         if not customer_id:
-            customers = timed.customers.get(cached=True)
-            customer_id = get_customer_by_name(customers, customer_name, archived)
-        # get the project id
-        projects = timed.projects.get(cached=True, filters={"customer": customer_id})
-        project_id = get_project_by_name(projects, project_name, customer_id, archived)
-    # get the tasks for the specified project
-    tasks = timed.tasks.get(cached=True, filters={"project": project_id})
-    output = []
-    for task in tasks:
-        output.append({"id": task["id"], "name": task["attributes"]["name"]})
-    output_formatted(output, output_format)
-
-
-@get.command("overtime", aliases=["t", "ot", "undertime"])
-@click.option("--date", default=None)
-def get_overtime(date):
-    """Get overtime of user."""
-    user = timed.users.me["id"]
-    overtime = timed.overtime.get({"user": user, "date": date})
-    msg(f"Current overtime is: {overtime}")
-
-
-@get.command("reports", aliases=["report", "r"])
-@click.option("--date", default=None)
-def get_reports(date):
-    """Get reports."""
-    reports = timed.reports.get(
-        filters={"date": date},
-        include="task,task.project,task.project.customer",
-    )
-    table = [["Customer", "Project", "Task", "Comment", "Duration"]]
-    for report in reports:
-        task_obj = report["relationships"]["task"]
-        project_obj = task_obj["relationships"]["project"]
-        customer_obj = project_obj["relationships"]["customer"]
-        # get name attributes
-        task, project, customer = (
-            x["attributes"]["name"] for x in [task_obj, project_obj, customer_obj]
+            customers = self.timed.customers.get(cached=True)
+            customer_id = self.get_customer_by_name(customers, customer_name, archived)
+        projects = self.timed.projects.get(
+            cached=True, filters={"customer": customer_id},
         )
-        comment = report["attributes"]["comment"]
-        duration = report["attributes"]["duration"]
+        output = []
+        for project in projects:
+            output.append({"id": project["id"], "name": project["attributes"]["name"]})
+        output_formatted(output, output_format)
 
-        table.append([customer, project, task, comment, duration])
-    # create the output
-    output = terminaltables.SingleTable(table)
-    msg(f"Reports for {date if date is not None else 'today'}:")
-    click.echo(output.table)
-    msg(f"Total: {time_sum(table)}")
+    def get_tasks(
+        self,
+        output_format,
+        customer_id,
+        customer_name,
+        project_id,
+        project_name,
+        archived,
+    ):
+        """Get tasks."""
+        if project_name and not (customer_id or customer_name):
+            error_handler("ERR_CUSTOMER_INFO_MISSING")
+        if not (project_id or project_name):
+            error_handler("ERR_MISSING_ARGUMENTS")
+        # Get project ID if name is specified
+        if not project_id:
+            # we need an id for the customer
+            if not customer_id:
+                customers = self.timed.customers.get(cached=True)
+                customer_id = self.get_customer_by_name(
+                    customers, customer_name, archived,
+                )
+            # get the project id
+            projects = self.timed.projects.get(
+                cached=True,
+                filters={"customer": customer_id},
+            )
+            project_id = self.get_project_by_name(
+                projects,
+                project_name,
+                customer_id,
+                archived,
+            )
+        # get the tasks for the specified project
+        tasks = self.timed.tasks.get(cached=True, filters={"project": project_id})
+        output = []
+        for task in tasks:
+            output.append({"id": task["id"], "name": task["attributes"]["name"]})
+        output_formatted(output, output_format)
 
+    def get_overtime(self, date):
+        """Get overtime of user."""
+        user = self.timed.users.me["id"]
+        overtime = self.timed.overtime.get({"user": user, "date": date})
+        msg(f"Current overtime is: {overtime}")
 
-@get.command("activities", aliases=["a", "ac", "activity"])
-@click.option("--date", default=None)
-def get_activities(date):
-    """Get activities."""
-    activities = timed.activities.get(
-        filters={"day": date},
-        include="task,task.project,task.project.customer",
-    )
-    table = [["Activity", "Comment", "Start", "End"]]
-    for activity_obj in activities:
-        table.append(
-            [
-                format_activity(activity_obj),
-                activity_obj["attributes"]["comment"],
-                activity_obj["attributes"]["from-time"].strftime("%H:%M:%S"),
-                activity_obj["attributes"]["to-time"].strftime("%H:%M:%S")
-                if activity_obj["attributes"]["to-time"] is not None
-                else "active",
-            ],
+    def get_reports(self, date):
+        """Get reports."""
+        reports = self.timed.reports.get(
+            filters={"date": date},
+            include="task,task.project,task.project.customer",
         )
-    output = terminaltables.SingleTable(table)
-    msg(f"Activities for {date if date is not None else 'today'}:")
-    click.echo(output.table)
+        table = [["Customer", "Project", "Task", "Comment", "Duration"]]
+        for report in reports:
+            task_obj = report["relationships"]["task"]
+            project_obj = task_obj["relationships"]["project"]
+            customer_obj = project_obj["relationships"]["customer"]
+            # get name attributes
+            task, project, customer = (
+                x["attributes"]["name"] for x in [task_obj, project_obj, customer_obj]
+            )
+            comment = report["attributes"]["comment"]
+            duration = report["attributes"]["duration"]
 
+            table.append([customer, project, task, comment, duration])
+        # create the output
+        output = terminaltables.SingleTable(table)
+        msg(f"Reports for {date if date is not None else 'today'}:")
+        click.echo(output.table)
+        msg(f"Total: {time_sum(table)}")
 
-@get.command("absences", aliases=["abs"])
-def get_absences():
-    """Get absences."""
-    error_handler("ERR_NOT_IMPLEMENTED")
+    def get_activities(self, date):
+        """Get activities."""
+        activities = self.timed.activities.get(
+            filters={"day": date},
+            include="task,task.project,task.project.customer",
+        )
+        table = [["Activity", "Comment", "Start", "End"]]
+        for activity_obj in activities:
+            table.append(
+                [
+                    self.format_activity(activity_obj),
+                    activity_obj["attributes"]["comment"],
+                    activity_obj["attributes"]["from-time"].strftime("%H:%M:%S"),
+                    activity_obj["attributes"]["to-time"].strftime("%H:%M:%S")
+                    if activity_obj["attributes"]["to-time"] is not None
+                    else "active",
+                ],
+            )
+        output = terminaltables.SingleTable(table)
+        msg(f"Activities for {date if date is not None else 'today'}:")
+        click.echo(output.table)
 
-
-@timedctl.group(cls=ClickAliasedGroup, aliases=["rm", "d", "remove", "del"])
-def delete():
-    """Delete different things."""
-    # pylint: disable=W0107
-
-
-@delete.command("report", aliases=["r"])
-@click.option("--date", default=None)
-def delete_report(date):
-    """Delete report(s)."""
-    report = select_report(date)
-    res = pyfzf.FzfPrompt().prompt(
-        ["Yes", "No"],
-        f"--prompt 'Are you sure? Delete \"{report[1]}\"?'",
-    )
-    if res[0] == "Yes":
-        req = timed.reports.delete(report[-1])
-        if req.status_code == requests.codes["no_content"]:
-            msg(f'Deleted report "{report[1]}"')
+    def delete_report(self, date):
+        """Delete report(s)."""
+        report = self.select_report(date)
+        res = pyfzf.FzfPrompt().prompt(
+            ["Yes", "No"],
+            f"--prompt 'Are you sure? Delete \"{report[1]}\"?'",
+        )
+        if res[0] == "Yes":
+            req = self.timed.reports.delete(report[-1])
+            if req.status_code == requests.codes["no_content"]:
+                msg(f'Deleted report "{report[1]}"')
+            else:
+                error_handler("ERR_DELETION_FAILED")
         else:
-            error_handler("ERR_DELETION_FAILED")
-    else:
-        error_handler("ERR_DELETION_ABORTED")
+            error_handler("ERR_DELETION_ABORTED")
 
-
-@delete.command("holiday", aliases=["h"])
-def delete_holiday():
-    """Delete holiday(s)."""
-    error_handler("ERR_NOT_IMPLEMENTED")
-
-
-@delete.command("absence", aliases=["abs"])
-def delete_absence():
-    """Delete absence(s)."""
-    error_handler("ERR_NOT_IMPLEMENTED")
-
-
-@timedctl.group(cls=ClickAliasedGroup, aliases=["a", "create"])
-def add():
-    """Add different things."""
-    # pylint: disable=W0107
-
-
-@add.command("report", aliases=["r"])
-@click.option("--customer", default=None)
-@click.option("--project", default=None)
-@click.option("--task", default=None)
-@click.option("--description", default=None)
-@click.option("--duration", default=None)
-@click.option("--show-archived", default=False, is_flag=True)
-def add_report(
-    customer,
-    project,
-    task,
-    description,
-    duration,
-    show_archived,
-):  # ruff: noqa: PLR0913
-    """Add report(s)."""
-    # select a task
-    task_id = select_task(customer, project, task, show_archived)
-    # ask the user to enter a description
-    if not description:
-        msg("Enter a description")
-        # get description
-        description = click.prompt("")
-    # ask the user to enter a duration
-    if duration:
-        if re.match(r"^\d{1,2}:\d{2}:\d{2}$", duration) is None:
-            error_handler("ERR_INVALID_DURATION")
-    else:
-        duration = time_picker()
-    # create the report
-    res = timed.reports.post(
-        {"duration": duration, "comment": description},
-        {
-            "task": task_id,
-        },
-    )
-    if res.status_code == requests.codes["created"]:
-        msg("Report created successfully")
-        return
-    # handle exception
-    error_handler("ERR_REPORT_CREATION_FAILED")
-
-
-@add.command("holiday", aliases=["h"])
-def add_holiday():
-    """Add holiday(s)."""
-    error_handler("ERR_NOT_IMPLEMENTED")
-
-
-@add.command("absence", aliases=["abs"])
-def add_absence():
-    """Add absence(s)."""
-    error_handler("ERR_NOT_IMPLEMENTED")
-
-
-@timedctl.group(cls=ClickAliasedGroup, aliases=["e", "edit", "update"])
-def edit():
-    """Edit different things."""
-    # pylint: disable=W0107
-
-
-@edit.command("report", aliases=["r"])
-@click.option("--date", default=None)
-def edit_report(date):
-    """Edit report(s)."""
-    report = select_report(date)
-
-    msg("Comment", True)
-    comment = click.prompt("", default=report[1].strip())
-    duration = time_picker(default=report[2])
-    res = pyfzf.FzfPrompt().prompt(["No", "Yes"], "--prompt 'Are you sure?'")
-    if res == ["Yes"]:
-        res = timed.reports.patch(
-            report[-1],
-            {"comment": comment, "duration": duration},
-            {"task": report[-2]},
+    def add_report(
+        self,
+        customer,
+        project,
+        task,
+        description,
+        duration,
+        show_archived,
+    ):
+        """Add report(s)."""
+        # select a task
+        task_id = self.select_task(customer, project, task, show_archived)
+        # ask the user to enter a description
+        if not description:
+            msg("Enter a description")
+            # get description
+            description = click.prompt("")
+        # ask the user to enter a duration
+        if duration:
+            if re.match(r"^\d{1,2}:\d{2}:\d{2}$", duration) is None:
+                error_handler("ERR_INVALID_DURATION")
+        else:
+            duration = time_picker()
+        # create the report
+        res = self.timed.reports.post(
+            {"duration": duration, "comment": description},
+            {
+                "task": task_id,
+            },
         )
-        if res.status_code == requests.codes["ok"]:
-            msg("Report updated successfully")
+        if res.status_code == requests.codes["created"]:
+            msg("Report created successfully")
             return
         # handle exception
-        error_handler("ERR_REPORT_UPDATE_FAILED")
-    else:
-        error_handler("ERR_REPORT_UPDATE_ABORTED")
+        error_handler("ERR_REPORT_CREATION_FAILED")
 
+    def edit_report(self, date):
+        """Edit report(s)."""
+        report = self.select_report(date)
 
-@edit.command("holiday", aliases=["h"])
-def edit_holiday():
-    """Edit holiday(s)."""
-    error_handler("ERR_NOT_IMPLEMENTED")
+        msg("Comment", True)
+        comment = click.prompt("", default=report[1].strip())
+        duration = time_picker(default=report[2])
+        res = pyfzf.FzfPrompt().prompt(["No", "Yes"], "--prompt 'Are you sure?'")
+        if res == ["Yes"]:
+            res = self.timed.reports.patch(
+                report[-1],
+                {"comment": comment, "duration": duration},
+                {"task": report[-2]},
+            )
+            if res.status_code == requests.codes["ok"]:
+                msg("Report updated successfully")
+                return
+            # handle exception
+            error_handler("ERR_REPORT_UPDATE_FAILED")
+        else:
+            error_handler("ERR_REPORT_UPDATE_ABORTED")
 
-
-@edit.command("absence", aliases=["abs"])
-def edit_absence():
-    """Edit absence(s)."""
-    error_handler("ERR_NOT_IMPLEMENTED")
-
-
-@timedctl.group(cls=ClickAliasedGroup, aliases=["ac"])
-def activity():
-    """Do stuff with activities."""
-    # pylint: disable=W0107
-
-
-@activity.command("start", aliases=["add", "a"])
-@click.argument("comment")
-@click.option("--customer", default=None)
-@click.option("--project", default=None)
-@click.option("--task", default=None)
-@click.option("--show-archived", default=False, is_flag=True)
-def start_activity(comment, customer, project, task, show_archived):
-    """Start recording activity."""
-    task_id = select_task(customer, project, task, show_archived)
-    # create the activity
-    res = timed.activities.start(
-        attributes={"comment": comment},
-        relationships={"task": task_id},
-    )
-
-    if res.status_code == requests.codes["created"]:
-        msg(f"Activity {comment} started successfully.")
-        return
-    # handle exception
-    error_handler("ERR_ACTIVITY_START_FAILED")
-
-
-@activity.command("stop", aliases=["end", "finish"])
-def stop_activity():
-    """Stop current activity."""
-    if not timed.activities.current:
-        error_handler("ERR_NO_CURRENT_ACTIVITY")
-    else:
-        timed.activities.stop()
-    msg("Activity stopped successfully.")
-
-
-@activity.command("show", aliases=["s", "get", "info"])
-@click.option("--short", default=False, is_flag=True)
-def show_activity(short):
-    """Show current activity."""
-    current_activity = timed.activities.get(
-        filters={"active": True},
-        include="task,task.project,task.project.customer",
-    )
-    if current_activity:
-        activity_obj = current_activity[0]
-        comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
-        start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
-        msg(
-            f"Current activity: {format_activity(activity_obj)}{comment} (Since "
-            + f"{start})",
+    def start_activity(self, comment, customer, project, task, show_archived):
+        """Start recording activity."""
+        task_id = self.select_task(customer, project, task, show_archived)
+        # create the activity
+        res = self.timed.activities.start(
+            attributes={"comment": comment},
+            relationships={"task": task_id},
         )
-    else:
-        error_handler("ERR_NO_CURRENT_ACTIVITY")
 
+        if res.status_code == requests.codes["created"]:
+            msg(f"Activity {comment} started successfully.")
+            return
+        # handle exception
+        error_handler("ERR_ACTIVITY_START_FAILED")
 
-@activity.command("restart", aliases=["r", "continue", "resume"])
-@click.option("--date", default=None)
-def restart_activity(date):
-    """Restart an activity."""
-    # stop current activity first
-    if timed.activities.current:
-        timed.activities.stop()
-        msg("Stopped current activity.")
-    # select an activity
-    activity_obj = select_activity(date)
-    # grab attributes
-    comment = activity_obj[1]
-    task_id = activity_obj[3]
-    res = timed.activities.start(
-        attributes={"comment": comment},
-        relationships={"task": task_id},
-    )
-    if res.status_code == requests.codes["created"]:
-        msg(f'Activity "{comment}" restarted successfully.')
-        return
-    # handle exception
-    error_handler("ERR_ACTIVITY_START_FAILED")
+    def stop_activity(self):
+        """Stop current activity."""
+        if not self.timed.activities.current:
+            error_handler("ERR_NO_CURRENT_ACTIVITY")
+        else:
+            self.timed.activities.stop()
+        msg("Activity stopped successfully.")
 
+    def show_activity(self, short):
+        """Show current activity."""
+        current_activity = self.timed.activities.get(
+            filters={"active": True},
+            include="task,task.project,task.project.customer",
+        )
+        if current_activity:
+            activity_obj = current_activity[0]
+            comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
+            start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
+            msg(
+                f"Current activity: {self.format_activity(activity_obj)}{comment}"+
+                f"  (Since {start})",
+            )
+        else:
+            error_handler("ERR_NO_CURRENT_ACTIVITY")
 
-@activity.command("delete", aliases=["d", "rm", "remove"])
-@click.option("--date", default=None)
-def delete_activity(date):
-    """Delete an activity."""
-    # select an activity
-    activity_obj = select_activity(date)
-    if timed.activities.delete(activity_obj[-1]):
-        msg(f"Activity {activity_obj[1]} deleted successfully.")
-        return
-    error_handler("ERR_ACTIVITY_DELETE_FAILED")
+    def restart_activity(self, date):
+        """Restart an activity."""
+        # stop current activity first
+        if self.timed.activities.current:
+            self.timed.activities.stop()
+            msg("Stopped current activity.")
+        # select an activity
+        activity_obj = self.select_activity(date)
+        # grab attributes
+        comment = activity_obj[1]
+        task_id = activity_obj[3]
+        res = self.timed.activities.start(
+            attributes={"comment": comment},
+            relationships={"task": task_id},
+        )
+        if res.status_code == requests.codes["created"]:
+            msg(f'Activity "{comment}" restarted successfully.')
+            return
+        # handle exception
+        error_handler("ERR_ACTIVITY_START_FAILED")
 
+    def delete_activity(self, date):
+        """Delete an activity."""
+        # select an activity
+        activity_obj = self.select_activity(date)
+        if self.timed.activities.delete(activity_obj[-1]):
+            msg(f"Activity {activity_obj[1]} deleted successfully.")
+            return
+        error_handler("ERR_ACTIVITY_DELETE_FAILED")
 
-@activity.command("generate-timesheet", aliases=["gts", "ts"])
-def activity_generate_timesheet():
-    """Generate the timesheet of the current activities."""
-    activities = timed.activities.get()
-    reports = timed.reports.get()
-    if activities:
-        for activity_obj in activities:
-            attr = activity_obj["attributes"]
-            if not attr["transferred"]:
-                # stop running activities
-                if not attr["to-time"]:
-                    attr["to-time"] = datetime.datetime.now()
-                # calculate duration
-                duration = attr["to-time"] - attr["from-time"]
-                # get task
-                task = activity_obj["relationships"]["task"]["data"]["id"]
-                # check if there is a report with the same comment that already exists
-                report = [
-                    x
-                    for x in reports
-                    if x["attributes"]["comment"] == attr["comment"]
-                    and x["relationships"]["task"]["data"]["id"] == task
-                ]
-                # if report has been found
-                if len(report) > 0:
-                    report = report[0]
-                    # deserialize the timedelta
-                    hours, minutes, seconds = report["attributes"]["duration"].split(
-                        ":",
+    def activity_generate_timesheet(self):
+        """Generate the timesheet of the current activities."""
+        activities = self.timed.activities.get()
+        reports = self.timed.reports.get()
+        if activities:
+            for activity_obj in activities:
+                attr = activity_obj["attributes"]
+                if not attr["transferred"]:
+                    # stop running activities
+                    if not attr["to-time"]:
+                        attr["to-time"] = datetime.datetime.now()
+                    # calculate duration
+                    duration = attr["to-time"] - attr["from-time"]
+                    # get task
+                    task = activity_obj["relationships"]["task"]["data"]["id"]
+                    # check if there is a report with the same
+                    # comment that already exists
+                    report = [
+                        x
+                        for x in reports
+                        if x["attributes"]["comment"] == attr["comment"]
+                        and x["relationships"]["task"]["data"]["id"] == task
+                    ]
+                    # if report has been found
+                    if len(report) > 0:
+                        report = report[0]
+                        # deserialize the timedelta
+                        hours, minutes, seconds = report["attributes"][
+                            "duration"
+                        ].split(
+                            ":",
+                        )
+                        old_duration = datetime.timedelta(
+                            hours=int(hours),
+                            minutes=int(minutes),
+                            seconds=int(seconds),
+                        )
+                        # calculate the new duration
+                        report["attributes"]["duration"] = old_duration + duration
+                        # update report
+                        self.timed.reports.patch(
+                            report["id"],
+                            report["attributes"],
+                            {"task": task},
+                        )
+                    else:
+                        # create report
+                        res = self.timed.reports.post(
+                            {
+                                "duration": duration,
+                                "comment": attr["comment"],
+                            },
+                            {"task": task},
+                        )
+                        # append the report to the known reports
+                        reports.append(res.json()["data"])
+                    # update activity to be transferred
+                    attr["transferred"] = True
+                    self.timed.activities.patch(
+                        activity_obj["id"], attr, {"task": task},
                     )
-                    old_duration = datetime.timedelta(
-                        hours=int(hours),
-                        minutes=int(minutes),
-                        seconds=int(seconds),
-                    )
-                    # calculate the new duration
-                    report["attributes"]["duration"] = old_duration + duration
-                    # update report
-                    timed.reports.patch(
-                        report["id"],
-                        report["attributes"],
-                        {"task": task},
-                    )
-                else:
-                    # create report
-                    res = timed.reports.post(
-                        {
-                            "duration": duration,
-                            "comment": attr["comment"],
-                        },
-                        {"task": task},
-                    )
-                    # append the report to the known reports
-                    reports.append(res.json()["data"])
-                # update activity to be transferred
-                attr["transferred"] = True
-                timed.activities.patch(activity_obj["id"], attr, {"task": task})
-        msg("Timesheet generated successfully.")
-    else:
-        error_handler("ERR_NO_ACTIVITIES")
-
-
-if __name__ == "__main__":
-    load_config()
-    timedctl()
+            msg("Timesheet generated successfully.")
+        else:
+            error_handler("ERR_NO_ACTIVITIES")
