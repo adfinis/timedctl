@@ -282,11 +282,10 @@ class Timedctl:
     def get_customers(self, output_format):
         """Get customers."""
         customers = self.timed.customers.get(cached=True)
-        output = []
-        for customer in customers:
-            output.append(
-                {"id": customer["id"], "name": customer["attributes"]["name"]},
-            )
+        output = [
+            {"id": customer["id"], "name": customer["attributes"]["name"]}
+            for customer in customers
+        ]
         output_formatted(output, output_format)
 
     def get_projects(self, output_format, customer_id, customer_name, archived):
@@ -301,9 +300,10 @@ class Timedctl:
             cached=True,
             filters={"customer": customer_id},
         )
-        output = []
-        for project in projects:
-            output.append({"id": project["id"], "name": project["attributes"]["name"]})
+        output = [
+            {"id": project["id"], "name": project["attributes"]["name"]}
+            for project in projects
+        ]
         output_formatted(output, output_format)
 
     def get_tasks(
@@ -343,9 +343,9 @@ class Timedctl:
             )
         # get the tasks for the specified project
         tasks = self.timed.tasks.get(cached=True, filters={"project": project_id})
-        output = []
-        for task in tasks:
-            output.append({"id": task["id"], "name": task["attributes"]["name"]})
+        output = [
+            {"id": task["id"], "name": task["attributes"]["name"]} for task in tasks
+        ]
         output_formatted(output, output_format)
 
     def get_overtime(self, date):
@@ -435,9 +435,8 @@ class Timedctl:
             # get description
             description = click.prompt("")
         # ask the user to enter a duration
-        if duration:
-            if re.match(r"^\d{1,2}:\d{2}:\d{2}$", duration) is None:
-                error_handler("ERR_INVALID_DURATION")
+        if duration and re.match(r"^\d{1,2}:\d{2}:\d{2}$", duration) is None:
+            error_handler("ERR_INVALID_DURATION")
         else:
             duration = time_picker()
         # create the report
@@ -461,19 +460,16 @@ class Timedctl:
         comment = click.prompt("", default=report[1].strip())
         duration = time_picker(default=report[2])
         res = pyfzf.FzfPrompt().prompt(["No", "Yes"], "--prompt 'Are you sure?'")
-        if res == ["Yes"]:
-            res = self.timed.reports.patch(
-                report[-1],
-                {"comment": comment, "duration": duration},
-                {"task": report[-2]},
-            )
-            if res.status_code == requests.codes["ok"]:
-                msg("Report updated successfully")
-                return
-            # handle exception
-            error_handler("ERR_REPORT_UPDATE_FAILED")
-        else:
+        if res != ["Yes"]:
             error_handler("ERR_REPORT_UPDATE_ABORTED")
+        res = self.timed.reports.patch(
+            report[-1],
+            {"comment": comment, "duration": duration},
+            {"task": report[-2]},
+        )
+        if res.status_code != requests.codes["ok"]:
+            error_handler("ERR_REPORT_UPDATE_FAILED")
+        msg("Report updated successfully")
 
     def start_activity(self, comment, customer, project, task, show_archived):
         """Start recording activity."""
@@ -494,8 +490,7 @@ class Timedctl:
         """Stop current activity."""
         if not self.timed.activities.current:
             error_handler("ERR_NO_CURRENT_ACTIVITY")
-        else:
-            self.timed.activities.stop()
+        self.timed.activities.stop()
         msg("Activity stopped successfully.")
 
     def show_activity(self, short):
@@ -504,16 +499,15 @@ class Timedctl:
             filters={"active": True},
             include="task,task.project,task.project.customer",
         )
-        if current_activity:
-            activity_obj = current_activity[0]
-            comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
-            start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
-            msg(
-                f"Current activity: {self.format_activity(activity_obj)}{comment}"
-                + f"  (Since {start})",
-            )
-        else:
+        if not current_activity:
             error_handler("ERR_NO_CURRENT_ACTIVITY")
+        activity_obj = current_activity[0]
+        comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
+        start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
+        msg(
+            f"Current activity: {self.format_activity(activity_obj)}{comment}"
+            + f"  (Since {start})",
+        )
 
     def restart_activity(self, date):
         """Restart an activity."""
@@ -530,84 +524,78 @@ class Timedctl:
             attributes={"comment": comment},
             relationships={"task": task_id},
         )
-        if res.status_code == requests.codes["created"]:
-            msg(f'Activity "{comment}" restarted successfully.')
-            return
-        # handle exception
-        error_handler("ERR_ACTIVITY_START_FAILED")
+        if res.status_code != requests.codes["created"]:
+            error_handler("ERR_ACTIVITY_START_FAILED")
+        msg(f'Activity "{comment}" restarted successfully.')
 
     def delete_activity(self, date):
         """Delete an activity."""
         # select an activity
         activity_obj = self.select_activity(date)
-        if self.timed.activities.delete(activity_obj[-1]):
-            msg(f"Activity {activity_obj[1]} deleted successfully.")
-            return
-        error_handler("ERR_ACTIVITY_DELETE_FAILED")
+        if not self.timed.activities.delete(activity_obj[-1]):
+            error_handler("ERR_ACTIVITY_DELETE_FAILED")
+        msg(f"Activity {activity_obj[1]} deleted successfully.")
 
     def activity_generate_timesheet(self):
         """Generate the timesheet of the current activities."""
         activities = self.timed.activities.get()
         reports = self.timed.reports.get()
-        if activities:
-            for activity_obj in activities:
-                attr = activity_obj["attributes"]
-                if not attr["transferred"]:
-                    # stop running activities
-                    if not attr["to-time"]:
-                        attr["to-time"] = datetime.datetime.now()
-                    # calculate duration
-                    duration = attr["to-time"] - attr["from-time"]
-                    # get task
-                    task = activity_obj["relationships"]["task"]["data"]["id"]
-                    # check if there is a report with the same
-                    # comment that already exists
-                    report = [
-                        x
-                        for x in reports
-                        if x["attributes"]["comment"] == attr["comment"]
-                        and x["relationships"]["task"]["data"]["id"] == task
-                    ]
-                    # if report has been found
-                    if len(report) > 0:
-                        report = report[0]
-                        # deserialize the timedelta
-                        hours, minutes, seconds = report["attributes"][
-                            "duration"
-                        ].split(
-                            ":",
-                        )
-                        old_duration = datetime.timedelta(
-                            hours=int(hours),
-                            minutes=int(minutes),
-                            seconds=int(seconds),
-                        )
-                        # calculate the new duration
-                        report["attributes"]["duration"] = old_duration + duration
-                        # update report
-                        self.timed.reports.patch(
-                            report["id"],
-                            report["attributes"],
-                            {"task": task},
-                        )
-                    else:
-                        # create report
-                        res = self.timed.reports.post(
-                            {
-                                "duration": duration,
-                                "comment": attr["comment"],
-                            },
-                            {"task": task},
-                        )
-                        # append the report to the known reports
-                        reports.append(res.json()["data"])
-                    # update activity to be transferred
-                    attr["transferred"] = True
-                    self.timed.activities.patch(
-                        activity_obj["id"],
-                        attr,
+        if not activities:
+            error_handler("ERR_NO_ACTIVITIES")
+        for activity_obj in activities:
+            attr = activity_obj["attributes"]
+            if not attr["transferred"]:
+                # stop running activities
+                if not attr["to-time"]:
+                    attr["to-time"] = datetime.datetime.now()
+                # calculate duration
+                duration = attr["to-time"] - attr["from-time"]
+                # get task
+                task = activity_obj["relationships"]["task"]["data"]["id"]
+                # check if there is a report with the same
+                # comment that already exists
+                report = [
+                    x
+                    for x in reports
+                    if x["attributes"]["comment"] == attr["comment"]
+                    and x["relationships"]["task"]["data"]["id"] == task
+                ]
+                # if report has been found
+                if len(report) > 0:
+                    report = report[0]
+                    # deserialize the timedelta
+                    hours, minutes, seconds = report["attributes"]["duration"].split(
+                        ":",
+                    )
+                    old_duration = datetime.timedelta(
+                        hours=int(hours),
+                        minutes=int(minutes),
+                        seconds=int(seconds),
+                    )
+                    # calculate the new duration
+                    report["attributes"]["duration"] = old_duration + duration
+                    # update report
+                    self.timed.reports.patch(
+                        report["id"],
+                        report["attributes"],
                         {"task": task},
                     )
-            msg("Timesheet generated successfully.")
-        else:
-            error_handler("ERR_NO_ACTIVITIES")
+                else:
+                    # create report
+                    res = self.timed.reports.post(
+                        {
+                            "duration": duration,
+                            "comment": attr["comment"],
+                        },
+                        {"task": task},
+                    )
+                    # append the report to the known reports
+                    reports.append(res.json()["data"])
+                # update activity to be transferred
+                attr["transferred"] = True
+                self.timed.activities.patch(
+                    activity_obj["id"],
+                    attr,
+                    {"task": task},
+                )
+        msg("Timesheet generated successfully.")
