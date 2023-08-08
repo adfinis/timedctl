@@ -26,6 +26,9 @@ from timedctl.helpers import (
 
 class Timedctl:
     def __init__(self):
+        pass
+
+    def load_config(self, custom_config=None):
         """Load the timedctl config."""
         cfg = {
             "username": "test",
@@ -45,7 +48,10 @@ class Timedctl:
             os.path.join(os.getenv("HOME"), ".config"),
         )
         config_dir = os.path.join(xdg_config_home, "timedctl")
-        config_file = os.path.join(config_dir, "config.toml")
+        if custom_config:
+            config_file = custom_config
+        else:
+            config_file = os.path.join(config_dir, "config.toml")
 
         if not os.path.isfile(config_file):
             os.makedirs(config_dir, exist_ok=True)

@@ -12,8 +12,10 @@ timed = Timedctl()
 
 @click.group(cls=ClickAliasedGroup)
 @click.option("--no-renew-token", default=False, is_flag=True)
-def timedctl(no_renew_token):
+@click.option("--config", "custom_config", default=None, type=str)
+def timedctl(no_renew_token, custom_config):
     """Use timedctl."""
+    timed.load_config(custom_config)
     timed.setup(no_renew_token)
     # pylint: disable=W0107
 
