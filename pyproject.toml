@@ -30,7 +30,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-timedctl = "timedctl.timedctl:timedctl"
+timedctl = "timedctl.cli:timedctl"
 
 [tool.semantic_release]
 version_toml = [
