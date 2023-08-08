@@ -61,6 +61,7 @@ class Timedctl:
                 cfg[key] = user_config[key]
         self.config = cfg
 
+    def setup(self, no_renew_token=True):
         """Set up the timed client."""
         # initialize libtimed
         url = self.config.get("timed_url")
@@ -72,6 +73,15 @@ class Timedctl:
         sso_realm = self.config.get("sso_realm")
         auth_path = "timedctl/auth"
         oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
+
+        # don't auto-refresh the token if asked
+        if no_renew_token:
+            token = oidc_client.keyring_get()
+            if not token:
+                error_handler("ERR_NO_TOKEN")
+            if not oidc_client.check_expired(token):
+                error_handler("ERR_TOKEN_EXPIRED")
+
         token = oidc_client.authorize()
         self.timed = TimedAPIClient(token, url, api_namespace)
 
@@ -182,7 +192,8 @@ class Timedctl:
     def get_customer_by_name(self, customers, name, archived):
         """Get customer by name."""
         customers = self.timed.customers.get(
-            cached=True, filters={"archived": archived},
+            cached=True,
+            filters={"archived": archived},
         )
         customer = [c for c in customers if c["attributes"]["name"] == name]
         if len(customer) == 0:
@@ -281,7 +292,8 @@ class Timedctl:
             customers = self.timed.customers.get(cached=True)
             customer_id = self.get_customer_by_name(customers, customer_name, archived)
         projects = self.timed.projects.get(
-            cached=True, filters={"customer": customer_id},
+            cached=True,
+            filters={"customer": customer_id},
         )
         output = []
         for project in projects:
@@ -308,7 +320,9 @@ class Timedctl:
             if not customer_id:
                 customers = self.timed.customers.get(cached=True)
                 customer_id = self.get_customer_by_name(
-                    customers, customer_name, archived,
+                    customers,
+                    customer_name,
+                    archived,
                 )
             # get the project id
             projects = self.timed.projects.get(
@@ -489,8 +503,8 @@ class Timedctl:
             comment = " > " + activity_obj["attributes"]["comment"] if not short else ""
             start = activity_obj["attributes"]["from-time"].strftime("%H:%M:%S")
             msg(
-                f"Current activity: {self.format_activity(activity_obj)}{comment}"+
-                f"  (Since {start})",
+                f"Current activity: {self.format_activity(activity_obj)}{comment}"
+                + f"  (Since {start})",
             )
         else:
             error_handler("ERR_NO_CURRENT_ACTIVITY")
@@ -584,7 +598,9 @@ class Timedctl:
                     # update activity to be transferred
                     attr["transferred"] = True
                     self.timed.activities.patch(
-                        activity_obj["id"], attr, {"task": task},
+                        activity_obj["id"],
+                        attr,
+                        {"task": task},
                     )
             msg("Timesheet generated successfully.")
         else:

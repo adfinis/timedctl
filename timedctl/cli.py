@@ -7,11 +7,14 @@ from click_aliases import ClickAliasedGroup
 from timedctl.helpers import error_handler
 from timedctl.timedctl import Timedctl
 
-timed = Timedctl() 
+timed = Timedctl()
+
 
 @click.group(cls=ClickAliasedGroup)
-def timedctl():
+@click.option("--no-renew-token", default=False, is_flag=True)
+def timedctl(no_renew_token):
     """Use timedctl."""
+    timed.setup(no_renew_token)
     # pylint: disable=W0107
 
 
@@ -67,7 +70,7 @@ def get_projects(**kwargs):
 @click.option("--project-name", default=None, type=str)
 @click.option("--archived", default=False, is_flag=True)
 def get_tasks(
-        **kwargs,
+    **kwargs,
 ):
     """Get tasks."""
     timed.get_tasks(**kwargs)
@@ -138,7 +141,7 @@ def add():
 @click.option("--description", default=None)
 @click.option("--duration", default=None)
 @click.option("--show-archived", default=False, is_flag=True)
-def add_report(**kwargs): 
+def add_report(**kwargs):
     """Add report(s)."""
     timed.add_report(**kwargs)
 
@@ -228,6 +231,7 @@ def delete_activity(**kwargs):
 def activity_generate_timesheet(**kwargs):
     """Generate the timesheet of the current activities."""
     timed.activity_generate_timesheet(**kwargs)
+
 
 if __name__ == "__main__":
     timedctl()
