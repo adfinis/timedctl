@@ -201,7 +201,9 @@ class Timedctl:
             cached=True,
             filters={"archived": archived},
         )
-        if (customer := next([c for c in customers if c["attributes"]["name"] == name], None)):
+        if customer := next(
+            [c for c in customers if c["attributes"]["name"] == name], None,
+        ):
             return customer[0]["id"]
         error_handler("ERR_CUSTOMER_NOT_FOUND")
 
@@ -211,7 +213,9 @@ class Timedctl:
             cached=True,
             filters={"customer": customer_id, "archived": archived},
         )
-        if (project := next([c for c in projects if c["attributes"]["name"] == name], None)):
+        if project := next(
+            [c for c in projects if c["attributes"]["name"] == name], None,
+        ):
             return project[0]["id"]
         error_handler("ERR_PROJECT_NOT_FOUND")
 
@@ -221,7 +225,7 @@ class Timedctl:
             cached=True,
             filters={"project": project_id, "archived": archived},
         )
-        if (task := next([c for c in tasks if c["attributes"]["name"] == name], None)):
+        if task := next([c for c in tasks if c["attributes"]["name"] == name], None):
             return task[0]["id"]
         error_handler("ERR_TASK_NOT_FOUND")
 
