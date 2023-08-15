@@ -443,11 +443,9 @@ class Timedctl:
                 "task": task_id,
             },
         )
-        if res.status_code == requests.codes["created"]:
-            msg("Report created successfully")
-            return
-        # handle exception
-        error_handler("ERR_REPORT_CREATION_FAILED")
+        if res.status_code != requests.codes["created"]:
+            error_handler("ERR_REPORT_CREATION_FAILED")
+        msg("Report created successfully")
 
     def edit_report(self, date):
         """Edit report(s)."""
@@ -476,12 +474,9 @@ class Timedctl:
             attributes={"comment": comment},
             relationships={"task": task_id},
         )
-
-        if res.status_code == requests.codes["created"]:
-            msg(f"Activity {comment} started successfully.")
-            return
-        # handle exception
-        error_handler("ERR_ACTIVITY_START_FAILED")
+        if res.status_code != requests.codes["created"]:
+            error_handler("ERR_ACTIVITY_START_FAILED")
+        msg(f"Activity {comment} started successfully.")
 
     def stop_activity(self):
         """Stop current activity."""
