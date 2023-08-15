@@ -213,11 +213,9 @@ class Timedctl:
             cached=True,
             filters={"customer": customer_id, "archived": archived},
         )
-        project = [c for c in projects if c["attributes"]["name"] == name]
-        if len(project) == 0:
-            error_handler("ERR_PROJECT_NOT_FOUND")
-        project_id = project[0]["id"]
-        return project_id
+        if (project := next([c for c in projects if c["attributes"]["name"] == name], None)):
+            return project[0]["id"]
+        error_handler("ERR_PROJECT_NOT_FOUND")
 
     def get_task_by_name(self, tasks, name, project_id, archived):
         """Get task by name."""
@@ -225,11 +223,9 @@ class Timedctl:
             cached=True,
             filters={"project": project_id, "archived": archived},
         )
-        task = [c for c in tasks if c["attributes"]["name"] == name]
-        if len(task) == 0:
-            error_handler("ERR_TASK_NOT_FOUND")
-        task_id = task[0]["id"]
-        return task_id
+        if (task := next([c for c in tasks if c["attributes"]["name"] == name], None)):
+            return task[0]["id"]
+        error_handler("ERR_TASK_NOT_FOUND")
 
     def select_task(self, customer, project, task, show_archived):
         """Select a task ID with fzf."""
