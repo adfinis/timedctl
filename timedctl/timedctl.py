@@ -387,16 +387,19 @@ class Timedctl:
         )
         table = [["Activity", "Comment", "Start", "End"]]
         for activity_obj in activities:
-            table.append(
-                [
-                    self.format_activity(activity_obj),
-                    activity_obj["attributes"]["comment"],
-                    activity_obj["attributes"]["from-time"].strftime("%H:%M:%S"),
-                    activity_obj["attributes"]["to-time"].strftime("%H:%M:%S")
-                    if activity_obj["attributes"]["to-time"] is not None
-                    else "active",
-                ],
-            )
+            attributes = activity_obj["attributes"]
+
+            activity_fmt = self.format_activity(activity_obj)
+            comment = attributes["comment"]
+            from_time_fmt = attributes["from-time"].strftime("%H:%M:%S")
+
+            to_time = attributes["to-time"]
+            to_time_fmt = "active"
+            if to_time:
+                to_time_fmt = to_time.strftime("%H:%M:%S")
+
+            table.append([activity_fmt, comment, from_time_fmt, to_time_fmt])
+
         output = terminaltables.SingleTable(table)
         msg(f"Activities for {date if date is not None else 'today'}:")
         click.echo(output.table)
