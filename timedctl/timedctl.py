@@ -407,14 +407,12 @@ class Timedctl:
             ["Yes", "No"],
             f"--prompt 'Are you sure? Delete \"{report[1]}\"?'",
         )
-        if res[0] == "Yes":
-            req = self.timed.reports.delete(report[-1])
-            if req.status_code == requests.codes["no_content"]:
-                msg(f'Deleted report "{report[1]}"')
-            else:
-                error_handler("ERR_DELETION_FAILED")
-        else:
+        if res[0] != "Yes":
             error_handler("ERR_DELETION_ABORTED")
+        req = self.timed.reports.delete(report[-1])
+        if req.status_code != requests.codes["no_content"]:
+            error_handler("ERR_DELETION_FAILED")
+        msg(f'Deleted report "{report[1]}"')
 
     def add_report(
         self,
