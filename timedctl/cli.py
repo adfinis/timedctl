@@ -17,19 +17,18 @@ def timedctl(no_renew_token, custom_config):
     """Use timedctl."""
     timed.load_config(custom_config)
     timed.setup(no_renew_token)
-    # pylint: disable=W0107
 
 
 @timedctl.group(cls=ClickAliasedGroup, aliases=["g", "show", "describe"])
 def get():
     """Get different things."""
-    # pylint: disable=W0107
+    pass
 
 
 @get.group(cls=ClickAliasedGroup)
 def data():
     """Get raw data for building custom scripts."""
-    # pylint: disable=W0107
+    pass
 
 
 @data.command("customers")
@@ -108,7 +107,7 @@ def get_absences():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["rm", "d", "remove", "del"])
 def delete():
     """Delete different things."""
-    # pylint: disable=W0107
+    pass
 
 
 @delete.command("report", aliases=["r"])
@@ -133,7 +132,7 @@ def delete_absence():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["a", "create"])
 def add():
     """Add different things."""
-    # pylint: disable=W0107
+    pass
 
 
 @add.command("report", aliases=["r"])
@@ -163,7 +162,7 @@ def add_absence():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["e", "edit", "update"])
 def edit():
     """Edit different things."""
-    # pylint: disable=W0107
+    pass
 
 
 @edit.command("report", aliases=["r"])
@@ -188,7 +187,7 @@ def edit_absence():
 @timedctl.group(cls=ClickAliasedGroup, aliases=["ac"])
 def activity():
     """Do stuff with activities."""
-    # pylint: disable=W0107
+    pass
 
 
 @activity.command("start", aliases=["add", "a"])
