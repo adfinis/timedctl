@@ -201,11 +201,9 @@ class Timedctl:
             cached=True,
             filters={"archived": archived},
         )
-        customer = [c for c in customers if c["attributes"]["name"] == name]
-        if len(customer) == 0:
-            error_handler("ERR_CUSTOMER_NOT_FOUND")
-        customer_id = customer[0]["id"]
-        return customer_id
+        if (customer := next([c for c in customers if c["attributes"]["name"] == name], None)):
+            return customer[0]["id"]
+        error_handler("ERR_CUSTOMER_NOT_FOUND")
 
     def get_project_by_name(self, projects, name, customer_id, archived):
         """Get project by name."""
