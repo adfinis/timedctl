@@ -195,16 +195,20 @@ class Timedctl:
         customer = customer_obj["attributes"]["name"]
         return f"{customer} > {project} > {task}"
 
+    def _get_by_name(self, items, name):
+        return next(
+            (i for i in items if i["attributes"]["name"] == name),
+            None,
+        )
+
     def get_customer_by_name(self, customers, name, archived):
         """Get customer by name."""
         customers = self.timed.customers.get(
             cached=True,
             filters={"archived": archived},
         )
-        if customer := next(
-            [c for c in customers if c["attributes"]["name"] == name], None,
-        ):
-            return customer[0]["id"]
+        if customer := self._get_by_name(customers, name):
+            return customer["id"]
         error_handler("ERR_CUSTOMER_NOT_FOUND")
 
     def get_project_by_name(self, projects, name, customer_id, archived):
@@ -213,10 +217,8 @@ class Timedctl:
             cached=True,
             filters={"customer": customer_id, "archived": archived},
         )
-        if project := next(
-            [c for c in projects if c["attributes"]["name"] == name], None,
-        ):
-            return project[0]["id"]
+        if project := self._get_by_name(projects, name):
+            return project["id"]
         error_handler("ERR_PROJECT_NOT_FOUND")
 
     def get_task_by_name(self, tasks, name, project_id, archived):
@@ -225,8 +227,8 @@ class Timedctl:
             cached=True,
             filters={"project": project_id, "archived": archived},
         )
-        if task := next([c for c in tasks if c["attributes"]["name"] == name], None):
-            return task[0]["id"]
+        if task := self._get_by_name(tasks, name):
+            return task["id"]
         error_handler("ERR_TASK_NOT_FOUND")
 
     def select_task(self, customer, project, task, show_archived):
