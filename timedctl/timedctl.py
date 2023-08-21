@@ -91,6 +91,16 @@ class Timedctl:
         token = oidc_client.authorize()
         self.timed = TimedAPIClient(token, url, api_namespace)
 
+    def _get_view(self, initial_view):
+        max_key_lengths = [
+            max(map(len, col)) for col in zip(*initial_view, strict=False)
+        ]
+        view = [
+            [value.ljust(max_key_lengths[j]) for j, value in enumerate(row)]
+            for row in initial_view
+        ]
+        return view
+
     def select_report(self, date):
         """FZF prompt to select a report."""
         reports = self.timed.reports.get(
@@ -109,18 +119,7 @@ class Timedctl:
                     report["id"],
                 ],
             )
-        # get longest key per value
-        max_key_lengths = [
-            max(map(len, col)) for col in zip(*report_view, strict=False)
-        ]
-        # pad all the values
-        report_view = [
-            [
-                report_view[i][j].ljust(max_key_lengths[j])
-                for j in range(len(report_view[i]))
-            ]
-            for i in range(len(report_view))
-        ]
+        report_view = self._get_view(report_view)
         # create a list for fzf
         fzf_obj = []
         for row in report_view:
@@ -154,18 +153,7 @@ class Timedctl:
                     activity_obj["id"],
                 ],
             )
-        # get longest key per value
-        max_key_lengths = [
-            max(map(len, col)) for col in zip(*activity_view, strict=False)
-        ]
-        # pad all the values
-        activity_view = [
-            [
-                activity_view[i][j].ljust(max_key_lengths[j])
-                for j in range(len(activity_view[i]))
-            ]
-            for i in range(len(activity_view))
-        ]
+        activity_view = self._get_view(activity_view)
         # create a list for fzf
         fzf_obj = []
         for row in activity_view:
