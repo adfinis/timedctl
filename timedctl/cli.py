@@ -190,6 +190,7 @@ def activity():
 @click.option("--project", default=None)
 @click.option("--task", default=None)
 @click.option("--show-archived", default=False, is_flag=True)
+@click.option("--start-time", "start", default=None)
 def start_activity(**kwargs):
     """Start recording activity."""
     timed.start_activity(**kwargs)

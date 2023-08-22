@@ -458,12 +458,20 @@ class Timedctl:
             error_handler("ERR_REPORT_UPDATE_FAILED")
         msg("Report updated successfully")
 
-    def start_activity(self, comment, customer, project, task, show_archived):
+    def start_activity(self, comment, customer, project, task, show_archived, start):
         """Start recording activity."""
+        if start:
+            # handle invalid input
+            if not re.match(r"^(\d{2}:)?\d{2}:\d{2}$", start):
+                error_handler("ERR_INVALID_START_TIME")
+            # handle short hand time
+            if re.match(r"^\d{2}:\d{2}$", start):
+                start = f"{start}:00"
+
         task_id = self.select_task(customer, project, task, show_archived)
         # create the activity
         res = self.timed.activities.start(
-            attributes={"comment": comment},
+            attributes={"comment": comment, "from-time": start},
             relationships={"task": task_id},
         )
         if res.status_code != requests.codes["created"]:
