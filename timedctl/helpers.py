@@ -69,6 +69,21 @@ def time_sum(arr):
     # format as HH:MM:SS
     return str(total)
 
+def activity_sum(arr):
+    """Sum up an array of activities."""
+    total = datetime.timedelta()
+    now = datetime.datetime.now()
+    for line in arr[1:]:
+        start = line[-2]
+        end = line[-1]
+        # if active activity, create end timestamp from `now`
+        if end == "active":
+            total += (now - datetime.datetime.strptime(now.strftime("%F")+"T"+start,"%Y-%m-%dT%H:%M:%S")) 
+        else:
+            total += (datetime.datetime.strptime(now.strftime("%F")+"T"+end,"%Y-%m-%dT%H:%M:%S") - datetime.datetime.strptime(now.strftime("%F")+"T"+start,"%Y-%m-%dT%H:%M:%S")) 
+    # format as HH:MM:SS
+    return str(total)
+
 
 def output_formatted(data, output_format):
     """Output data in a specified format."""

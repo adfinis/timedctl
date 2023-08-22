@@ -21,6 +21,7 @@ from timedctl.helpers import (
     output_formatted,
     time_picker,
     time_sum,
+    activity_sum,
 )
 
 
@@ -391,6 +392,7 @@ class Timedctl:
         output = terminaltables.SingleTable(table)
         msg(f"Activities for {date if date is not None else 'today'}:")
         click.echo(output.table)
+        msg(f"Total: {activity_sum(table)}")
 
     def delete_report(self, date):
         """Delete report(s)."""
