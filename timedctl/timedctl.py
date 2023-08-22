@@ -15,13 +15,13 @@ from libtimed.oidc import OIDCClient
 from tomlkit import dump
 
 from timedctl.helpers import (
+    activity_sum,
     error_handler,
     fzf_wrapper,
     msg,
     output_formatted,
     time_picker,
     time_sum,
-    activity_sum,
 )
 
 
