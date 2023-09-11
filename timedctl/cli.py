@@ -19,6 +19,12 @@ def timedctl(no_renew_token, custom_config):
     timed.setup(no_renew_token)
 
 
+@timedctl.command("force-renew")
+def force_renew():
+    """Force renew token."""
+    timed.force_renew()
+
+
 @timedctl.group(cls=ClickAliasedGroup, aliases=["g", "show", "describe"])
 def get():
     """Get different things."""
