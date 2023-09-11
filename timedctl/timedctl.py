@@ -67,7 +67,7 @@ class Timedctl:
                 cfg[key] = user_config[key]
         self.config = cfg
 
-    def setup(self, no_renew_token=True):
+    def setup(self, no_renew_token=False):
         """Set up the timed client."""
         # initialize libtimed
         url = self.config.get("timed_url")
@@ -78,18 +78,28 @@ class Timedctl:
         sso_url = self.config.get("sso_url")
         sso_realm = self.config.get("sso_realm")
         auth_path = "timedctl/auth"
-        oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
+        self.oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
 
         # don't auto-refresh the token if asked
         if no_renew_token:
-            token = oidc_client.keyring_get()
+            token = self.oidc_client.keyring_get()
             if not token:
                 error_handler("ERR_NO_TOKEN")
-            if not oidc_client.check_expired(token):
+            if not self.oidc_client.check_expired(token):
                 error_handler("ERR_TOKEN_EXPIRED")
 
-        token = oidc_client.authorize()
+        token = self.oidc_client.authorize()
         self.timed = TimedAPIClient(token, url, api_namespace)
+
+    def force_renew(self):
+        """Force a token renewal."""
+        self.oidc_client.autoconfig()
+        if self.oidc_client.start_browser_flow():
+            if token := self.oidc_client.get_token():
+                self.oidc_client.keyring_set(token)
+                msg("Token successfully renewed.")
+                return
+            error_handler("ERR_NO_TOKEN_RENEWAL_FAILED")
 
     def _get_view(self, initial_view):
         max_key_lengths = [
