@@ -276,20 +276,17 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "click-aliases"
-version = "1.0.1"
-description = "Enable aliases for Click"
+version = "1.0.3"
+description = "Add (mutiple) aliases to a click group or command"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8,<4.0"
 files = [
-    {file = "click-aliases-1.0.1.tar.gz", hash = "sha256:f48012077e0788eb02f4f8ee458fef3601873fec6c998e9ea8b4554394e705a3"},
-    {file = "click_aliases-1.0.1-py2.py3-none-any.whl", hash = "sha256:229ecab12a97d1d5ce3f1fd7ce16da0e4333a24ebe3b34d8b7a6d0a1d2cfab90"},
+    {file = "click_aliases-1.0.3-py3-none-any.whl", hash = "sha256:bee3a117fe7647684fa0e59b9763390346072f3ee3185822fb0f556fb9b491a4"},
+    {file = "click_aliases-1.0.3.tar.gz", hash = "sha256:d81a0f480e7a9778c2f45e762c9cf1922287fea62999367a07e64a762293ac52"},
 ]
 
 [package.dependencies]
-click = "*"
-
-[package.extras]
-dev = ["coveralls", "flake8", "flake8-import-order", "pytest", "pytest-cov", "tox-travis", "wheel"]
+click = ">=8.1.7,<9.0.0"
 
 [[package]]
 name = "colorama"
