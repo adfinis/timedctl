@@ -384,6 +384,7 @@ class Timedctl:
             include="task,task.project,task.project.customer",
         )
         table = [["Activity", "Comment", "Start", "End"]]
+        total_time = datetime.timedelta()
         for activity_obj in activities:
             attributes = activity_obj["attributes"]
 
@@ -394,13 +395,25 @@ class Timedctl:
             to_time = attributes["to-time"]
             to_time_fmt = "active"
             if to_time:
+                # Format the time if set
                 to_time_fmt = to_time.strftime("%H:%M:%S")
+                # Temporary timedelta
+                tmp_timedelta = to_time - attributes["from-time"]
+                # Add the rounded timedelta to the total time
+                rounding_factor = datetime.timedelta(minutes=15)
+                rounded_time = (
+                    (tmp_timedelta + rounding_factor - datetime.timedelta(seconds=1))
+                    // rounding_factor
+                    * rounding_factor
+                )
+                total_time += rounded_time
 
             table.append([activity_fmt, comment, from_time_fmt, to_time_fmt])
 
         output = terminaltables.SingleTable(table)
         msg(f"Activities for {date if date is not None else 'today'}:")
         click.echo(output.table)
+        msg(f"Total: {total_time}")
 
     def delete_report(self, date):
         """Delete report(s)."""
