@@ -1,10 +1,10 @@
 """
 API unrelated helper functions.
 """
-import datetime
 import json
 import re
 import sys
+from datetime import timedelta
 
 import click
 import pyfzf
@@ -62,7 +62,7 @@ def time_picker(default=None):
 
 def time_sum(arr):
     """Sum up an array of time strings."""
-    total = datetime.timedelta()
+    total = timedelta()
     for line in arr[1:]:
         val = line[-1]
         total += val

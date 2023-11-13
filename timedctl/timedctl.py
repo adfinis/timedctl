@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 """CLI application for libtimed."""
 
-import datetime
 import os
 import re
+from datetime import datetime, timedelta
 
 import click
 import pyfzf
 import requests
-import terminaltables
 import tomllib
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
+from rich import print
+from rich.table import Table
 from tomlkit import dump
 
 from timedctl.helpers import (
@@ -20,7 +21,6 @@ from timedctl.helpers import (
     msg,
     output_formatted,
     time_picker,
-    time_sum,
 )
 
 
@@ -358,7 +358,18 @@ class Timedctl:
             filters={"date": date},
             include="task,task.project,task.project.customer",
         )
-        table = [["Customer", "Project", "Task", "Comment", "Duration"]]
+        title = f"Activities for {date if date is not None else 'today'}:"
+        table = Table(
+            "Customer",
+            "Project",
+            "Task",
+            "Comment",
+            "Duration",
+            title=title,
+            title_style="bold",
+            show_lines=True,
+        )
+        total = timedelta(days=0)
         for report in reports:
             task_obj = report["relationships"]["task"]
             project_obj = task_obj["relationships"]["project"]
@@ -368,14 +379,12 @@ class Timedctl:
                 x["attributes"]["name"] for x in [task_obj, project_obj, customer_obj]
             )
             comment = report["attributes"]["comment"]
-            duration = report["attributes"]["duration"]
+            duration: timedelta = report["attributes"]["duration"]
+            total += duration
 
-            table.append([customer, project, task, comment, duration])
-        # create the output
-        output = terminaltables.SingleTable(table)
-        msg(f"Reports for {date if date is not None else 'today'}:")
-        click.echo(output.table)
-        msg(f"Total: {time_sum(table)}")
+            table.add_row(customer, project, task, comment, str(duration))
+        table.add_row("", "", "", "", str(total))
+        print(table)
 
     def get_activities(self, date):
         """Get activities."""
@@ -383,8 +392,17 @@ class Timedctl:
             filters={"day": date},
             include="task,task.project,task.project.customer",
         )
-        table = [["Activity", "Comment", "Start", "End"]]
-        total_time = datetime.timedelta()
+        title = f"Activities for {date if date is not None else 'today'}:"
+        table = Table(
+            "Activity",
+            "Comment",
+            "Start",
+            "End",
+            title=title,
+            title_style="bold",
+            show_lines=True,
+        )
+        total_time = timedelta()
         for activity_obj in activities:
             attributes = activity_obj["attributes"]
 
@@ -400,19 +418,17 @@ class Timedctl:
                 # Temporary timedelta
                 tmp_timedelta = to_time - attributes["from-time"]
                 # Add the rounded timedelta to the total time
-                rounding_factor = datetime.timedelta(minutes=15)
+                rounding_factor = timedelta(minutes=15)
                 rounded_time = (
-                    (tmp_timedelta + rounding_factor - datetime.timedelta(seconds=1))
+                    (tmp_timedelta + rounding_factor - timedelta(seconds=1))
                     // rounding_factor
                     * rounding_factor
                 )
                 total_time += rounded_time
 
-            table.append([activity_fmt, comment, from_time_fmt, to_time_fmt])
+            table.add_row(activity_fmt, comment, from_time_fmt, to_time_fmt)
 
-        output = terminaltables.SingleTable(table)
-        msg(f"Activities for {date if date is not None else 'today'}:")
-        click.echo(output.table)
+        print(table)
         msg(f"Total: {total_time}")
 
     def delete_report(self, date):
@@ -562,7 +578,7 @@ class Timedctl:
             if not attr["transferred"]:
                 # stop running activities
                 if not attr["to-time"]:
-                    attr["to-time"] = datetime.datetime.now()
+                    attr["to-time"] = datetime.now()
                 # calculate duration
                 duration = attr["to-time"] - attr["from-time"]
                 # get task
@@ -582,7 +598,7 @@ class Timedctl:
                     hours, minutes, seconds = report["attributes"]["duration"].split(
                         ":",
                     )
-                    old_duration = datetime.timedelta(
+                    old_duration = timedelta(
                         hours=int(hours),
                         minutes=int(minutes),
                         seconds=int(seconds),
