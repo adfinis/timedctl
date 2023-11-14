@@ -13,6 +13,7 @@ timed = Timedctl()
 @click.group(cls=ClickAliasedGroup)
 @click.option("--no-renew-token", default=False, is_flag=True)
 @click.option("--config", "custom_config", default=None, type=str)
+@click.version_option(package_name="timedctl")
 def timedctl(no_renew_token, custom_config):
     """Use timedctl."""
     timed.load_config(custom_config)
