@@ -5,20 +5,30 @@ import json
 import re
 import sys
 from datetime import timedelta
+from os import getenv
+from pathlib import Path
 
 import click
 import pyfzf
-import rich
+from rich import print
+from tomlkit import dumps
+
+DEFAULT_CONFIG = {
+    "timed_url": "https://timed.example.com",
+    "sso_url": "https://sso.example.com",
+    "sso_realm": "example",
+    "sso_client_id": "timedctl",
+}
 
 
 def msg(message, nonl=False):
     """Print a message in bold green."""
-    rich.print(f"[bold green]{message}[/bold green]", end="" if nonl else "\n")
+    print(f"[bold green]{message}[/bold green]", end="" if nonl else "\n")
 
 
 def error_handler(error):
     """Handle errors."""
-    rich.print(f"[bold red]Error: {error}[/bold red]")
+    print(f"[bold red]Error: {error}[/bold red]")
     sys.exit(1)
 
 
@@ -55,7 +65,7 @@ def time_picker(default=None):
     """Interactively pick a time using either arrow keys or typing."""
     res = ""
     while not re.match(r"^\d{1,2}:\d{2}:\d{2}$", res):
-        rich.print("[bold green]Duration[/bold green] (hh:mm:ss)", end="")
+        print("[bold green]Duration[/bold green] (hh:mm:ss)", end="")
         res = click.prompt("", default=default)
     return res
 
@@ -74,17 +84,36 @@ def output_formatted(data, output_format):
     """Output data in a specified format."""
     match output_format:
         case "json":
-            rich.print(json.dumps(data, indent=4))
+            print(json.dumps(data, indent=4))
         case "csv":
             keys = data[0].keys()
             output = ",".join(keys) + "\n"
             for obj in data:
                 output += ",".join(obj.values()) + "\n"
-            rich.print(output)
+            print(output)
         case "text":
             for obj in data:
                 for key, val in obj.items():
-                    rich.print(f"[{key}]: {val}, ", end="")
-                rich.print("")
+                    print(f"[{key}]: {val}, ", end="")
+                print("")
         case _:
-            rich.print("Invalid format")
+            print("Invalid format")
+
+
+def get_config_file() -> Path:
+    config_home = Path(getenv("XDG_CONFIG_HOME", "~/.config")).expanduser()
+    config_file = config_home.joinpath("timedctl/config.toml")
+    if config_file.exists():
+        return config_file
+
+    xdg_config_dirs = getenv("XDG_CONFIG_DIRS", "/etc/xdg/").split(":")
+    for config_dir in xdg_config_dirs:
+        system_wide_config = (
+            Path(config_dir).expanduser().joinpath("timedctl/config.toml")
+        )
+        if system_wide_config.exists():
+            return system_wide_config
+
+    config_file.write_text(dumps(DEFAULT_CONFIG))
+    print(f"[bold]Dumped default config file to {config_file.absolute()}[/bold]")
+    return config_file

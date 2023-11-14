@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 """CLI application for libtimed."""
 
-import os
 import re
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import click
 import pyfzf
 import requests
-import tomllib
 from libtimed import TimedAPIClient
 from libtimed.oidc import OIDCClient
 from rich import print
 from rich.table import Table
-from tomlkit import dump
+from tomlkit import load
 
 from timedctl.helpers import (
     error_handler,
@@ -25,50 +24,11 @@ from timedctl.helpers import (
 
 
 class Timedctl:
-    def __init__(self):
-        pass
+    def __init__(self, config_file: Path, no_renew_token: bool) -> None:
+        if not config_file.exists():
+            error_handler(f"{config_file.absolute()} does not exist")
+        self.config_file = config_file
 
-    def load_config(self, custom_config=None):
-        """Load the timedctl config."""
-        cfg = {
-            "username": "test",
-            "timed_url": "https://timed.example.com",
-            "sso_url": "https://sso.example.com",
-            "sso_realm": "example",
-            "sso_client_id": "timedctl",
-        }
-
-        # Get the path to the config file based on the
-        # $XDG_config_HOME environment variable
-        if not os.getenv("HOME"):
-            raise OSError("$HOME is not set")
-
-        xdg_config_home = os.getenv(
-            "XDG_CONFIG_HOME",
-            os.path.join(os.getenv("HOME"), ".config"),
-        )
-        config_dir = os.path.join(xdg_config_home, "timedctl")
-        if custom_config:
-            config_file = custom_config
-        else:
-            config_file = os.path.join(config_dir, "config.toml")
-
-        if not os.path.isfile(config_file):
-            os.makedirs(config_dir, exist_ok=True)
-            click.echo("No config file found. Please enter the following infos.")
-            for key in cfg:
-                cfg[key] = input(f"{key} ({cfg[key]}): ")
-            with open(config_file, "w", encoding="utf-8") as file:
-                dump(cfg, file)
-        else:
-            with open(config_file, "rb") as file:
-                user_config = tomllib.load(file)
-            for key in user_config:
-                cfg[key] = user_config[key]
-        self.config = cfg
-
-    def setup(self, no_renew_token=False):
-        """Set up the timed client."""
         # initialize libtimed
         url = self.config.get("timed_url")
         api_namespace = "api/v1"
@@ -82,14 +42,17 @@ class Timedctl:
 
         # don't auto-refresh the token if asked
         if no_renew_token:
-            token = self.oidc_client.keyring_get()
-            if not token:
+            if not (token := self.oidc_client.keyring_get()):
                 error_handler("ERR_NO_TOKEN")
-            if not self.oidc_client.check_expired(token):
-                error_handler("ERR_TOKEN_EXPIRED")
+            error_handler("ERR_TOKEN_EXPIRED")
 
         token = self.oidc_client.authorize()
         self.timed = TimedAPIClient(token, url, api_namespace)
+
+    @property
+    def config(self):
+        with self.config_file.open("rb") as f:
+            return load(f)
 
     def force_renew(self):
         """Force a token renewal."""
