@@ -13,6 +13,10 @@ People on other distributions can use pip to install the package from pypi:
 ```bash
 $ pip install timedctl
 ```
+Nix / NixOS people can just run the flake:
+```
+nix run github:adfinis/timedctl
+```
 
 ### Shell completion
 `timedctl` support shell completion for the unaliased commands:
