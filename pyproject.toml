@@ -22,7 +22,7 @@ pytest = "^7.3.2"
 isort = "^5.12.0"
 flake8 = ">=6,<8"
 ruff = "v0.1.5"
-pytest-cov = "^4.1.0"
+pytest-cov = ">=4.1,<6.0"
 
 [build-system]
 requires = ["poetry-core"]
