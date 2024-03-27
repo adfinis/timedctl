@@ -1,6 +1,7 @@
 """
 API unrelated helper functions.
 """
+
 import json
 import re
 import sys
