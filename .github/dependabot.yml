@@ -1,3 +1,4 @@
+---
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -8,3 +9,10 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      python:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - ruff
+          - libtimed
