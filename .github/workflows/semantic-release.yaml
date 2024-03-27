@@ -1,10 +1,8 @@
 ---
-
 name: Semantic Release
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   semantic-release:
@@ -15,24 +13,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - run: pipx install poetry
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-          cache: 'poetry'
-
-      - run: poetry install
-
-      - name: Configure poetry
-        run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
-
       - name: Run go-semantic-release
         id: semrel
         uses: go-semantic-release/action@v1.21
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: pipx install poetry
+        if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
+        with:
+          python-version: "3.x"
+          cache: "poetry"
+
+      - run: poetry install
+        if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
+
+      - name: Configure poetry
+        if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
+        run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
 
       - name: Bump Poetry
         if: github.ref == 'refs/heads/main' && steps.semrel.outputs.version != ''
