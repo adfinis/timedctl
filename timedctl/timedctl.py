@@ -151,7 +151,7 @@ class Timedctl:
             timeout=TIMEOUT,
         )
 
-        if device_code_response.status_code != requests.status_codes.codes.ok:
+        if device_code_response.status_code != requests.codes.ok:
             error_handler("ERR_GENERATING_DEVICE_CODE")
 
         device_code_data = device_code_response.json()
@@ -176,7 +176,7 @@ class Timedctl:
             )
             token_data = token_response.json()
 
-            if token_response.status_code == requests.status_codes.codes.ok:
+            if token_response.status_code == requests.codes.ok:
                 keyring.set_password(
                     "system",
                     "timedctl_token_" + client_id + "_access",
@@ -212,7 +212,7 @@ class Timedctl:
         )
         token_data = token_response.json()
 
-        if token_response.status_code != requests.status_codes.codes.ok:
+        if token_response.status_code != requests.codes.ok:
             return self.login()
 
         keyring.set_password(
