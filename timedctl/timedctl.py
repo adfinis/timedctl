@@ -109,7 +109,7 @@ class Timedctl:
             )
             try:
                 jwt.decode(refresh_token, leeway=-10, options=decode_options)
-                access_token = self.refresh_token(refresh_token)
+                access_token = self.refresh_token(refresh_token, no_renew_token)
 
             except (jwt.exceptions.ExpiredSignatureError, jwt.exceptions.DecodeError):
                 # Refresh token expired or missing
@@ -194,7 +194,7 @@ class Timedctl:
             else:
                 time.sleep(device_code_data["interval"])
 
-    def refresh_token(self, token):
+    def refresh_token(self, token, no_renew_token=False):
         """Refresh token."""
         client_id = self.config.get("sso_client_id")
         openid_configuration = self.get_openid_configuration()
@@ -213,6 +213,9 @@ class Timedctl:
         token_data = token_response.json()
 
         if token_response.status_code != requests.codes.ok:
+            if no_renew_token:
+                error_handler("ERR_REFRESHING_TOKEN")
+
             return self.login()
 
         keyring.set_password(
