@@ -74,8 +74,7 @@ If this isn't the case you can see the default config options below:
 ```toml
 username = "<your username>"
 timed_url = "<timed url>"
-sso_url = "<sso url>"
-sso_realm = "<sso realm>"
+sso_discovery_url = "<sso url>"
 sso_client_id = "<client id>"
 ```
 
