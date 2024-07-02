@@ -3,14 +3,17 @@
 
 import os
 import re
+import time
+import webbrowser
 from datetime import datetime, timedelta
 
 import click
+import jwt
+import keyring
 import pyfzf
 import requests
 import tomllib
 from libtimed import TimedAPIClient
-from libtimed.oidc import OIDCClient
 from rich import print
 from rich.table import Table
 from tomlkit import dump
@@ -23,6 +26,8 @@ from timedctl.helpers import (
     time_picker,
 )
 
+TIMEOUT = 30
+
 
 class Timedctl:
     def __init__(self):
@@ -33,8 +38,7 @@ class Timedctl:
         cfg = {
             "username": "test",
             "timed_url": "https://timed.example.com",
-            "sso_url": "https://sso.example.com",
-            "sso_realm": "example",
+            "sso_discovery_url": "https://sso.example.com/realms/example",
             "sso_client_id": "timedctl",
         }
 
@@ -63,6 +67,22 @@ class Timedctl:
         else:
             with open(config_file, "rb") as file:
                 user_config = tomllib.load(file)
+
+            # Migration from sso_url & sso_realm to sso_discovery_url
+            if (
+                "sso_discovery_url" not in user_config
+                and "sso_url" in user_config
+                and "sso_realm" in user_config
+            ):
+                user_config["sso_discovery_url"] = (
+                    user_config["sso_url"] + "/realms/" + user_config["sso_realm"]
+                )
+                del user_config["sso_url"]
+                del user_config["sso_realm"]
+
+                with open(config_file, "w", encoding="utf-8") as file:
+                    dump(user_config, file)
+
             for key in user_config:
                 cfg[key] = user_config[key]
         self.config = cfg
@@ -72,24 +92,138 @@ class Timedctl:
         # initialize libtimed
         url = self.config.get("timed_url")
         api_namespace = "api/v1"
+        client_id = self.config["sso_client_id"]
 
-        # Auth stuff
+        access_token = keyring.get_password(
+            "system", "timedctl_token_" + client_id + "_access"
+        )
+        decode_options = {"verify_signature": False, "verify_exp": "verify_signature"}
+        try:
+            # Check if access_token is valid
+            jwt.decode(access_token, leeway=-30, options=decode_options)
+
+        except (jwt.exceptions.ExpiredSignatureError, jwt.exceptions.DecodeError):
+            # Access token expired or missing
+            refresh_token = keyring.get_password(
+                "system", "timedctl_token_" + client_id + "_refresh"
+            )
+            try:
+                jwt.decode(refresh_token, leeway=-10, options=decode_options)
+                access_token = self.refresh_token(refresh_token, no_renew_token)
+
+            except (jwt.exceptions.ExpiredSignatureError, jwt.exceptions.DecodeError):
+                # Refresh token expired or missing
+                if no_renew_token:
+                    error_handler("ERR_TOKEN_MISSING_OR_EXPIRED")
+
+                access_token = self.login()
+
+        self.timed = TimedAPIClient(access_token, url, api_namespace)
+
+    def get_openid_configuration(self):
+        """Return the OpenID configuration."""
+        sso_discovery_url = self.config.get("sso_discovery_url")
+
+        # Retrieve OpenID configuration
+        openid_configuration = requests.get(
+            f"{sso_discovery_url}/.well-known/openid-configuration", timeout=TIMEOUT
+        ).json()
+        if "error" in openid_configuration:
+            error_handler("ERR_COULD_NOT_GET_OPENID_CONFIGURATION")
+
+        return openid_configuration
+
+    def login(self):
+        """Authenticates using device code."""
         client_id = self.config.get("sso_client_id")
-        sso_url = self.config.get("sso_url")
-        sso_realm = self.config.get("sso_realm")
-        auth_path = "timedctl/auth"
-        self.oidc_client = OIDCClient(client_id, sso_url, sso_realm, auth_path)
+        openid_configuration = self.get_openid_configuration()
 
-        # don't auto-refresh the token if asked
-        if no_renew_token:
-            token = self.oidc_client.keyring_get()
-            if not token:
-                error_handler("ERR_NO_TOKEN")
-            if not self.oidc_client.check_expired(token):
-                error_handler("ERR_TOKEN_EXPIRED")
+        if (
+            "urn:ietf:params:oauth:grant-type:device_code"
+            not in openid_configuration["grant_types_supported"]
+        ):
+            error_handler("ERR_SSO_DOES_NOT_SUPPORT_DEVICE_CODE")
 
-        token = self.oidc_client.authorize()
-        self.timed = TimedAPIClient(token, url, api_namespace)
+        device_code_payload = {"client_id": client_id, "scope": "openid"}
+        device_code_response = requests.post(
+            openid_configuration["device_authorization_endpoint"],
+            data=device_code_payload,
+            timeout=TIMEOUT,
+        )
+
+        if device_code_response.status_code != requests.codes.ok:
+            error_handler("ERR_GENERATING_DEVICE_CODE")
+
+        device_code_data = device_code_response.json()
+        print(
+            "A web browser was opened at {}. Please continue the login in the web browser.".format(
+                device_code_data["verification_uri_complete"]
+            )
+        )
+        webbrowser.open_new(device_code_data["verification_uri_complete"])
+
+        token_payload = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
+            "device_code": device_code_data["device_code"],
+            "client_id": client_id,
+        }
+
+        while True:
+            token_response = requests.post(
+                openid_configuration["token_endpoint"],
+                data=token_payload,
+                timeout=TIMEOUT,
+            )
+            token_data = token_response.json()
+
+            if token_response.status_code == requests.codes.ok:
+                keyring.set_password(
+                    "system",
+                    "timedctl_token_" + client_id + "_access",
+                    token_data["access_token"],
+                )
+                keyring.set_password(
+                    "system",
+                    "timedctl_token_" + client_id + "_refresh",
+                    token_data["refresh_token"],
+                )
+                return token_data["access_token"]
+            elif token_data["error"] not in ("authorization_pending", "slow_down"):
+                print(token_data["error_description"])
+                error_handler("ERR_AUTHORIZATION_FAILED")
+            else:
+                time.sleep(device_code_data["interval"])
+
+    def refresh_token(self, token, no_renew_token=False):
+        """Refresh token."""
+        client_id = self.config.get("sso_client_id")
+        openid_configuration = self.get_openid_configuration()
+
+        if "refresh_token" not in openid_configuration["grant_types_supported"]:
+            error_handler("ERR_SSO_DOES_NOT_SUPPORT_REFRESH")
+
+        token_payload = {
+            "grant_type": "refresh_token",
+            "refresh_token": token,
+            "client_id": client_id,
+        }
+        token_response = requests.post(
+            openid_configuration["token_endpoint"], data=token_payload, timeout=TIMEOUT
+        )
+        token_data = token_response.json()
+
+        if token_response.status_code != requests.codes.ok:
+            if no_renew_token:
+                error_handler("ERR_REFRESHING_TOKEN")
+
+            return self.login()
+
+        keyring.set_password(
+            "system",
+            "timedctl_token_" + client_id + "_access",
+            token_data["access_token"],
+        )
+        return token_data["access_token"]
 
     def force_renew(self):
         """Force a token renewal."""
