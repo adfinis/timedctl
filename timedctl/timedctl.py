@@ -14,7 +14,7 @@ import pyfzf
 import requests
 import tomllib
 from libtimed import TimedAPIClient
-from rich import print
+from rich import print as rprint
 from rich.table import Table
 from tomlkit import dump
 
@@ -60,8 +60,8 @@ class Timedctl:
         if not os.path.isfile(config_file):
             os.makedirs(config_dir, exist_ok=True)
             click.echo("No config file found. Please enter the following infos.")
-            for key in cfg:
-                cfg[key] = input(f"{key} ({cfg[key]}): ")
+            for key, value in cfg.items():
+                cfg[key] = input(f"{key} ({value}): ")
             with open(config_file, "w", encoding="utf-8") as file:
                 dump(cfg, file)
         else:
@@ -155,7 +155,7 @@ class Timedctl:
             error_handler("ERR_GENERATING_DEVICE_CODE")
 
         device_code_data = device_code_response.json()
-        print(
+        rprint(
             "A web browser was opened at {}. Please continue the login in the web browser.".format(
                 device_code_data["verification_uri_complete"]
             )
@@ -189,7 +189,7 @@ class Timedctl:
                 )
                 return token_data["access_token"]
             elif token_data["error"] not in ("authorization_pending", "slow_down"):
-                print(token_data["error_description"])
+                rprint(token_data["error_description"])
                 error_handler("ERR_AUTHORIZATION_FAILED")
             else:
                 time.sleep(device_code_data["interval"])
@@ -518,7 +518,7 @@ class Timedctl:
 
             table.add_row(customer, project, task, comment, str(duration))
         table.add_row("", "", "", "", str(total))
-        print(table)
+        rprint(table)
 
     def get_activities(self, date):
         """Get activities."""
@@ -562,7 +562,7 @@ class Timedctl:
 
             table.add_row(activity_fmt, comment, from_time_fmt, to_time_fmt)
 
-        print(table)
+        rprint(table)
         msg(f"Total: {total_time}")
 
     def delete_report(self, date):
